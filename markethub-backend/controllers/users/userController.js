@@ -151,23 +151,18 @@ const getUserProducts = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const user = await User.findById(req.user.id).populate({
-      path: 'products',
-      options: {
-        skip,
-        limit: parseInt(limit),
-        sort: { createdAt: -1 }
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const total = user.products.length;
+    // Fetch products directly by seller to avoid relying on user.products linkage
+    const Product = require('../../models/products/productModel');
+    const [products, total] = await Promise.all([
+      Product.find({ seller: req.user.id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Product.countDocuments({ seller: req.user.id })
+    ]);
 
     res.status(200).json({
-      products: user.products,
+      products,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / parseInt(limit)),
@@ -203,7 +198,7 @@ const getUserFavorites = async (req, res) => {
     const total = user.favorites.length;
 
     res.status(200).json({
-      favorites: user.favorites,
+      products: user.favorites,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / parseInt(limit)),
@@ -222,6 +217,7 @@ const toggleFavorite = async (req, res) => {
   try {
     const { productId } = req.params;
     const user = await User.findById(req.user.id);
+    const Product = require('../../models/products/productModel');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -232,11 +228,11 @@ const toggleFavorite = async (req, res) => {
     if (favoriteIndex > -1) {
       // Remove from favorites
       user.favorites.splice(favoriteIndex, 1);
-      await User.findByIdAndUpdate(productId, { $inc: { favorites: -1 } });
+      await Product.findByIdAndUpdate(productId, { $inc: { favorites: -1 } });
     } else {
       // Add to favorites
       user.favorites.push(productId);
-      await User.findByIdAndUpdate(productId, { $inc: { favorites: 1 } });
+      await Product.findByIdAndUpdate(productId, { $inc: { favorites: 1 } });
     }
 
     await user.save();

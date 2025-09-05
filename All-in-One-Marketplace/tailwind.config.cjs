@@ -5,6 +5,17 @@ module.exports = {
       "./index.html",
       "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    safelist: [
+        {
+          pattern: /from-(indigo|sky|rose|amber)-(100|200)/,
+        },
+        {
+          pattern: /to-(indigo|sky|rose|amber)-(100|200)/,
+        },
+        {
+          pattern: /text-(indigo|sky|rose|amber)-600/,
+        },
+      ],
     theme: {
         extend: {
             colors: {

@@ -1,42 +1,29 @@
 const API_BASE_URL = 'http://localhost:5000/api';
 
-// API Response types
-interface ApiResponse<T> {
-  data?: T;
-  message?: string;
-  errors?: any[];
-}
-
-interface PaginatedResponse<T> {
-  products: T[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
-  };
-}
-
 // Product types matching backend
 export interface Product {
   id: string;
   title: string;
-  price?: string;
+  price: number;
+  originalPrice?: number;
   location?: string;
   rating?: number;
   image: string;
+  images?: string[];
   category: 'marketplace' | 'secondhand' | 'jobs' | 'travel';
   featured?: boolean;
   description?: string;
   condition?: 'new' | 'like-new' | 'good' | 'fair' | 'poor';
   jobType?: 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
   experience?: 'entry' | 'mid' | 'senior' | 'executive';
-  salary?: string;
+  salary?: number;
   tripType?: 'flights' | 'hotels' | 'packages' | 'activities' | 'transport';
   duration?: string;
   tags?: string[];
   views?: number;
   favorites?: number;
+  inStock?: boolean;
+  quantity?: number;
   seller?: {
     id: string;
     username: string;
@@ -100,6 +87,17 @@ export interface AuthResponse {
   message: string;
 }
 
+// Paginated response
+export interface PaginatedResponse<T> {
+  products: T[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
+
 // API Client class
 class ApiClient {
   private baseURL: string;
@@ -113,12 +111,12 @@ class ApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
+  ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (this.token) {
@@ -162,11 +160,12 @@ class ApiClient {
       body: JSON.stringify(credentials),
     });
     
-    if (response.data) {
-      this.setToken(response.data.token);
+    // Backend returns response directly
+    if (response.token) {
+      this.setToken(response.token);
     }
     
-    return response.data!;
+    return response;
   }
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
@@ -175,16 +174,17 @@ class ApiClient {
       body: JSON.stringify(credentials),
     });
     
-    if (response.data) {
-      this.setToken(response.data.token);
+    // Backend returns response directly
+    if (response.token) {
+      this.setToken(response.token);
     }
     
-    return response.data!;
+    return response;
   }
 
   async getProfile(): Promise<User> {
     const response = await this.request<User>('/users/profile');
-    return response.data!;
+    return response;
   }
 
   async updateProfile(updates: Partial<User>): Promise<{ user: User; message: string }> {
@@ -192,7 +192,7 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
-    return response.data!;
+    return response;
   }
 
   // Product endpoints
@@ -226,18 +226,29 @@ class ApiClient {
     const endpoint = `/products${queryString ? `?${queryString}` : ''}`;
     
     const response = await this.request<PaginatedResponse<Product>>(endpoint);
-    return response.data!;
+    return response;
   }
 
   async getProductById(id: string): Promise<Product> {
     const response = await this.request<Product>(`/products/${id}`);
-    return response.data!;
+    return response;
+  }
+
+  async incrementProductViews(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/products/${id}/views`, { method: 'POST' });
+  }
+
+  async purchaseProduct(id: string, qty: number): Promise<{ message: string; product: Product }>{
+    return this.request<{ message: string; product: Product }>(`/products/${id}/purchase`, {
+      method: 'POST',
+      body: JSON.stringify({ quantity: qty }),
+    });
   }
 
   async getFeaturedProducts(limit?: number): Promise<Product[]> {
     const queryString = limit ? `?limit=${limit}` : '';
     const response = await this.request<Product[]>(`/products/featured${queryString}`);
-    return response.data!;
+    return response;
   }
 
   async getProductsByCategory(
@@ -263,15 +274,15 @@ class ApiClient {
     const endpoint = `/products/category/${category}${queryString ? `?${queryString}` : ''}`;
     
     const response = await this.request<PaginatedResponse<Product>>(endpoint);
-    return response.data!;
+    return response;
   }
 
-  async createProduct(productData: Omit<Product, 'id' | 'seller' | 'createdAt' | 'updatedAt'>): Promise<Product> {
+  async createProduct(productData: Partial<Product>): Promise<Product> {
     const response = await this.request<Product>('/products', {
       method: 'POST',
       body: JSON.stringify(productData),
     });
-    return response.data!;
+    return response;
   }
 
   async updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
@@ -279,38 +290,38 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
-    return response.data!;
+    return response;
   }
 
   async deleteProduct(id: string): Promise<{ message: string }> {
     const response = await this.request<{ message: string }>(`/products/${id}`, {
       method: 'DELETE',
     });
-    return response.data!;
+    return response;
   }
 
   // Category endpoints
   async getCategories(): Promise<Category[]> {
     const response = await this.request<Category[]>('/categories');
-    return response.data!;
+    return response;
   }
 
   async getMainCategories(): Promise<Category[]> {
     const response = await this.request<Category[]>('/categories/main');
-    return response.data!;
+    return response;
   }
 
   async getCategoryBySlug(slug: string): Promise<Category> {
-    const response = await this.request<Category>(`/categories/slug/${slug}`);
-    return response.data!;
+    const response = await this.request<Category>(`/categories/by-slug/${slug}`);
+    return response;
   }
 
   async getCategoryFilters(category: string): Promise<Record<string, any[]>> {
-    const response = await this.request<Record<string, any[]>>(`/categories/filters?category=${category}`);
-    return response.data!;
+    const response = await this.request<Record<string, any[]>>(`/categories/filters/${category}`);
+    return response;
   }
 
-  // User management endpoints
+  // User-specific product endpoints
   async getUserProducts(params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Product>> {
     const searchParams = new URLSearchParams();
     
@@ -326,7 +337,7 @@ class ApiClient {
     const endpoint = `/users/products${queryString ? `?${queryString}` : ''}`;
     
     const response = await this.request<PaginatedResponse<Product>>(endpoint);
-    return response.data!;
+    return response;
   }
 
   async getUserFavorites(params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Product>> {
@@ -344,27 +355,116 @@ class ApiClient {
     const endpoint = `/users/favorites${queryString ? `?${queryString}` : ''}`;
     
     const response = await this.request<PaginatedResponse<Product>>(endpoint);
-    return response.data!;
+    return response;
   }
 
   async toggleFavorite(productId: string): Promise<{ message: string; isFavorite: boolean }> {
     const response = await this.request<{ message: string; isFavorite: boolean }>(`/users/favorites/${productId}`, {
       method: 'POST',
     });
-    return response.data!;
+    return response;
+  }
+
+  // Cart endpoints
+  async getCart(): Promise<{ items: any[]; total: number }> {
+    const response = await this.request<{ items: any[]; total: number }>('/users/cart');
+    return response;
+  }
+
+  async addToCart(productId: string, quantity: number = 1): Promise<{ message: string; cart: any }> {
+    const response = await this.request<{ message: string; cart: any }>('/users/cart', {
+      method: 'POST',
+      body: JSON.stringify({ productId, quantity }),
+    });
+    return response;
+  }
+
+  async updateCartItem(productId: string, quantity: number): Promise<{ message: string; cart: any }> {
+    const response = await this.request<{ message: string; cart: any }>(`/users/cart/${productId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantity }),
+    });
+    return response;
+  }
+
+  async removeFromCart(productId: string): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>(`/users/cart/${productId}`, {
+      method: 'DELETE',
+    });
+    return response;
+  }
+
+  async clearCart(): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>('/users/cart', {
+      method: 'DELETE',
+    });
+    return response;
+  }
+
+  async createOrder(orderData: any): Promise<{ order: any; message: string }> {
+    const response = await this.request<{ order: any; message: string }>('/orders', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
+    });
+    return response;
+  }
+
+  async getUserOrders(): Promise<{ orders: any[] }> {
+    const response = await this.request<{ orders: any[] }>('/orders/user');
+    return response;
+  }
+
+  async getSellerOrders(): Promise<{ orders: any[] }> {
+    const response = await this.request<{ orders: any[] }>('/orders/seller');
+    return response;
+  }
+
+  async updateSubOrderStatus(orderId: string, subOrderId: string, status: string, trackingNumber?: string): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>(`/orders/${orderId}/suborders/${subOrderId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, trackingNumber }),
+    });
+    return response;
+  }
+
+  // Admin endpoints
+  async getAdminStats(): Promise<any> {
+    const response = await this.request<any>('/admin/stats');
+    return response;
+  }
+
+  async getAllUsers(): Promise<{ users: any[] }> {
+    const response = await this.request<{ users: any[] }>('/admin/users');
+    return response;
+  }
+
+  async getAllOrders(): Promise<{ orders: any[] }> {
+    const response = await this.request<{ orders: any[] }>('/admin/orders');
+    return response;
+  }
+
+  async deleteUser(userId: string): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>(`/admin/users/${userId}`, {
+      method: 'DELETE',
+    });
+    return response;
+  }
+
+  async updateUserStatus(userId: string, isActive: boolean): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>(`/admin/users/${userId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ isActive }),
+    });
+    return response;
+  }
+
+  async cancelOrder(orderId: string): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>(`/orders/${orderId}/cancel`, {
+      method: 'PUT',
+    });
+    return response;
   }
 }
 
-// Create and export API client instance
+// Create and export a singleton instance
 export const apiClient = new ApiClient(API_BASE_URL);
-
-// Export types
-export type {
-  Product,
-  Category,
-  User,
-  LoginCredentials,
-  RegisterCredentials,
-  AuthResponse,
-  PaginatedResponse,
-};

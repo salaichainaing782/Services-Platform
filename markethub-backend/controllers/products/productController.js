@@ -5,395 +5,336 @@ const Product = require('../../models/products/productModel');
 const User = require('../../models/users/userModel');
 const { validationResult } = require('express-validator');
 
-// Get all products with filtering, pagination, and search
+// Get all products with pagination, search, and filtering
 const getAllProducts = async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 12,
-      category,
-      search,
-      minPrice,
-      maxPrice,
-      location,
-      condition,
-      jobType,
-      experience,
-      tripType,
-      featured,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 12, 100);
+    const skip = (page - 1) * limit;
 
-    // Build filter object
-    const filter = { status: 'active' };
-    
-    if (category) filter.category = category;
-    if (featured === 'true') filter.featured = true;
-    if (location) filter.location = { $regex: location, $options: 'i' };
-    if (condition) filter.condition = condition;
-    if (jobType) filter.jobType = jobType;
-    if (experience) filter.experience = experience;
-    if (tripType) filter.tripType = tripType;
-
-    // Price filtering
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) filter.price.$gte = parseFloat(minPrice);
-      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
-    }
+    // Build query object
+    let query = {};
 
     // Search functionality
-    if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } }
+    if (req.query.search) {
+      query.$or = [
+        { title: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } },
+        { tags: { $in: [new RegExp(req.query.search, 'i')] } }
       ];
     }
 
-    // Build sort object
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    // Category filter
+    if (req.query.category) {
+      const categories = req.query.category.split(',');
+      query.category = { $in: categories };
+    }
 
-    // Execute query with pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    const products = await Product.find(filter)
+    // Price range filter
+    if (req.query.minPrice || req.query.maxPrice) {
+      query.price = {};
+      if (req.query.minPrice) {
+        query.price.$gte = parseFloat(req.query.minPrice);
+      }
+      if (req.query.maxPrice) {
+        query.price.$lte = parseFloat(req.query.maxPrice);
+      }
+    }
+
+    // Location filter
+    if (req.query.location) {
+      query.location = { $regex: req.query.location, $options: 'i' };
+    }
+
+    // Condition filter (for secondhand)
+    if (req.query.condition) {
+      query.condition = req.query.condition;
+    }
+
+    // Job type filter
+    if (req.query.jobType) {
+      query.jobType = req.query.jobType;
+    }
+
+    // Experience filter
+    if (req.query.experience) {
+      query.experience = req.query.experience;
+    }
+
+    // Trip type filter
+    if (req.query.tripType) {
+      query.tripType = req.query.tripType;
+    }
+
+    // Featured filter
+    if (req.query.featured === 'true') {
+      query.featured = true;
+    }
+
+    // Build sort object
+    let sort = { createdAt: -1 }; // default sort
+    if (req.query.sortBy) {
+      const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+      sort = { [req.query.sortBy]: sortOrder };
+    }
+
+    const products = await Product.find(query)
       .populate('seller', 'username firstName lastName avatar rating')
-      .sort(sort)
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limit)
+      .sort(sort)
       .lean();
 
-    // Get total count for pagination
-    const total = await Product.countDocuments(filter);
-
-    // Transform data to match frontend interface
-    const transformedProducts = products.map(product => ({
-      id: product._id.toString(),
-      title: product.title,
-      price: product.price,
-      location: product.location,
-      rating: product.rating,
-      image: product.image,
-      category: product.category,
-      featured: product.featured,
-      description: product.description,
-      condition: product.condition,
-      jobType: product.jobType,
-      experience: product.experience,
-      salary: product.salary,
-      tripType: product.tripType,
-      duration: product.duration,
-      tags: product.tags,
-      views: product.views,
-      favorites: product.favorites,
-      seller: product.seller,
-      createdAt: product.createdAt
+    // Add id field for frontend compatibility
+    const productsWithId = products.map(product => ({
+      ...product,
+      id: product._id.toString()
     }));
 
-    res.status(200).json({
-      products: transformedProducts,
+    const total = await Product.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      products: productsWithId,
       pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / parseInt(limit)),
+        currentPage: page,
+        totalPages,
         totalItems: total,
-        itemsPerPage: parseInt(limit)
+        itemsPerPage: limit
       }
     });
   } catch (error) {
     console.error('Error fetching products:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get featured products
+const getFeaturedProducts = async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 6, 20);
+    const products = await Product.find({ featured: true })
+      .populate('seller', 'username firstName lastName avatar rating')
+      .limit(limit)
+      .sort({ views: -1, createdAt: -1 });
+
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching featured products:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get products by category with sorting
+const getProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 12, 100);
+    const skip = (page - 1) * limit;
+
+    // Build sort object
+    let sort = { createdAt: -1 }; // default sort
+    if (req.query.sortBy) {
+      const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+      sort = { [req.query.sortBy]: sortOrder };
+    }
+
+    const products = await Product.find({ category })
+      .populate('seller', 'username firstName lastName avatar rating')
+      .skip(skip)
+      .limit(limit)
+      .sort(sort)
+      .lean();
+
+    // Add id field for frontend compatibility
+    const productsWithId = products.map(product => ({
+      ...product,
+      id: product._id.toString()
+    }));
+
+    const total = await Product.countDocuments({ category });
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      products: productsWithId,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching products by category:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
 // Get product by ID
 const getProductById = async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    const product = await Product.findById(id)
-      .populate('seller', 'username firstName lastName avatar rating totalReviews')
+    const product = await Product.findById(req.params.id)
+      .populate('seller', 'username firstName lastName avatar rating')
       .lean();
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Increment view count
-    await Product.findByIdAndUpdate(id, { $inc: { views: 1 } });
-
-    // Transform to match frontend interface
-    const transformedProduct = {
-      id: product._id.toString(),
-      title: product.title,
-      price: product.price,
-      location: product.location,
-      rating: product.rating,
-      image: product.image,
-      category: product.category,
-      featured: product.featured,
-      description: product.description,
-      condition: product.condition,
-      jobType: product.jobType,
-      experience: product.experience,
-      salary: product.salary,
-      tripType: product.tripType,
-      duration: product.duration,
-      tags: product.tags,
-      views: product.views + 1, // Include the incremented view
-      favorites: product.favorites,
-      seller: product.seller,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt
+    // Add id field for frontend compatibility
+    const productWithId = {
+      ...product,
+      id: product._id.toString()
     };
 
-    res.status(200).json(transformedProduct);
+    res.json(productWithId);
   } catch (error) {
     console.error('Error fetching product:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid product ID' });
+    }
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
 // Create new product
 const createProduct = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    // Clean price field - remove $ sign and convert to number
+    let cleanedData = { ...req.body };
+    if (cleanedData.price) {
+      cleanedData.price = parseFloat(cleanedData.price.toString().replace(/[$,]/g, ''));
+    }
+    if (cleanedData.salary) {
+      cleanedData.salary = parseFloat(cleanedData.salary.toString().replace(/[$,]/g, ''));
     }
 
-    const productData = req.body;
-    
-    // Set seller from authenticated user
-    productData.seller = req.user.id;
-
-    const newProduct = new Product(productData);
-    await newProduct.save();
-
-    // Populate seller info
-    await newProduct.populate('seller', 'username firstName lastName avatar');
-
-    const transformedProduct = {
-      id: newProduct._id.toString(),
-      title: newProduct.title,
-      price: newProduct.price,
-      location: newProduct.location,
-      rating: newProduct.rating,
-      image: newProduct.image,
-      category: newProduct.category,
-      featured: newProduct.featured,
-      description: newProduct.description,
-      condition: newProduct.condition,
-      jobType: newProduct.jobType,
-      experience: newProduct.experience,
-      salary: newProduct.salary,
-      tripType: newProduct.tripType,
-      duration: newProduct.duration,
-      tags: newProduct.tags,
-      views: newProduct.views,
-      favorites: newProduct.favorites,
-      seller: newProduct.seller,
-      createdAt: newProduct.createdAt
+    const productData = {
+      ...cleanedData,
+      seller: req.user.id
     };
 
-    res.status(201).json(transformedProduct);
+    const product = new Product(productData);
+    await product.save();
+
+    // Link product to user's products array for quick access
+    try {
+      await User.findByIdAndUpdate(req.user.id, { $push: { products: product._id } });
+    } catch (linkErr) {
+      console.error('Warning: failed to link product to user.products:', linkErr);
+    }
+
+    const populatedProduct = await Product.findById(product._id)
+      .populate('seller', 'username firstName lastName avatar rating');
+
+    res.status(201).json(populatedProduct);
   } catch (error) {
     console.error('Error creating product:', error);
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Product with this title already exists' });
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Validation error', errors: error.errors });
     }
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-
+// Update product
 const updateProduct = async (req, res) => {
   try {
-    const { id } = req.params;
-    const updateData = req.body;
+    const product = await Product.findById(req.params.id);
 
-    const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    
+    // Check if user owns the product or is admin
     if (product.seller.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to update this product' });
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Clean price field - remove $ sign and convert to number
+    let cleanedData = { ...req.body };
+    if (cleanedData.price) {
+      cleanedData.price = parseFloat(cleanedData.price.toString().replace(/[$,]/g, ''));
+    }
+    if (cleanedData.salary) {
+      cleanedData.salary = parseFloat(cleanedData.salary.toString().replace(/[$,]/g, ''));
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      updateData,
+      req.params.id,
+      cleanedData,
       { new: true, runValidators: true }
-    ).populate('seller', 'username firstName lastName avatar');
+    ).populate('seller', 'username firstName lastName avatar rating');
 
-    const transformedProduct = {
-      id: updatedProduct._id.toString(),
-      title: updatedProduct.title,
-      price: updatedProduct.price,
-      location: updatedProduct.location,
-      rating: updatedProduct.rating,
-      image: updatedProduct.image,
-      category: updatedProduct.category,
-      featured: updatedProduct.featured,
-      description: updatedProduct.description,
-      condition: updatedProduct.condition,
-      jobType: updatedProduct.jobType,
-      experience: updatedProduct.experience,
-      salary: updatedProduct.salary,
-      tripType: updatedProduct.tripType,
-      duration: updatedProduct.duration,
-      tags: updatedProduct.tags,
-      views: updatedProduct.views,
-      favorites: updatedProduct.favorites,
-      seller: updatedProduct.seller,
-      createdAt: updatedProduct.createdAt,
-      updatedAt: updatedProduct.updatedAt
-    };
-
-    res.status(200).json(transformedProduct);
+    res.json(updatedProduct);
   } catch (error) {
     console.error('Error updating product:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-
+// Delete product
 const deleteProduct = async (req, res) => {
   try {
-    const { id } = req.params;
+    const product = await Product.findById(req.params.id);
 
-    const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    
+    // Check if user owns the product or is admin
     if (product.seller.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to delete this product' });
+      return res.status(403).json({ message: 'Access denied' });
     }
 
-    await Product.findByIdAndDelete(id);
+    await Product.findByIdAndDelete(req.params.id);
+    
+    // Remove from user's products array
+    try {
+      await User.findByIdAndUpdate(req.user.id, { $pull: { products: req.params.id } });
+    } catch (linkErr) {
+      console.error('Warning: failed to unlink product from user.products:', linkErr);
+    }
 
-    res.status(200).json({ message: 'Product deleted successfully' });
+    res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error('Error deleting product:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-
-const getFeaturedProducts = async (req, res) => {
+// Increment product views
+const incrementProductViews = async (req, res) => {
   try {
-    const { limit = 6 } = req.query;
+    const { id } = req.params;
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
 
-    const featuredProducts = await Product.find({ 
-      featured: true, 
-      status: 'active' 
-    })
-    .populate('seller', 'username firstName lastName avatar rating')
-    .sort({ createdAt: -1 })
-    .limit(parseInt(limit))
-    .lean();
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
 
-    const transformedProducts = featuredProducts.map(product => ({
-      id: product._id.toString(),
-      title: product.title,
-      price: product.price,
-      location: product.location,
-      rating: product.rating,
-      image: product.image,
-      category: product.category,
-      featured: product.featured,
-      description: product.description,
-      condition: product.condition,
-      jobType: product.jobType,
-      experience: product.experience,
-      salary: product.salary,
-      tripType: product.tripType,
-      duration: product.duration,
-      tags: product.tags,
-      views: product.views,
-      favorites: product.favorites,
-      seller: product.seller,
-      createdAt: product.createdAt
-    }));
-
-    res.status(200).json(transformedProducts);
+    res.json({ message: 'View counted', views: product.views });
   } catch (error) {
-    console.error('Error fetching featured products:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
-  }
-};
-
-
-const getProductsByCategory = async (req, res) => {
-  try {
-    const { category } = req.params;
-    const { page = 1, limit = 12, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-
-    const filter = { category, status: 'active' };
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    const products = await Product.find(filter)
-      .populate('seller', 'username firstName lastName avatar rating')
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .lean();
-
-    const total = await Product.countDocuments(filter);
-
-    const transformedProducts = products.map(product => ({
-      id: product._id.toString(),
-      title: product.title,
-      price: product.price,
-      location: product.location,
-      rating: product.rating,
-      image: product.image,
-      category: product.category,
-      featured: product.featured,
-      description: product.description,
-      condition: product.condition,
-      jobType: product.jobType,
-      experience: product.experience,
-      salary: product.salary,
-      tripType: product.tripType,
-      duration: product.duration,
-      tags: product.tags,
-      views: product.views,
-      favorites: product.favorites,
-      seller: product.seller,
-      createdAt: product.createdAt
-    }));
-
-    res.status(200).json({
-      products: transformedProducts,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / parseInt(limit)),
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching products by category:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    console.error('Error incrementing views:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid product ID' });
+    }
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
 module.exports = {
   getAllProducts,
+  getFeaturedProducts,
+  getProductsByCategory,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
-  getFeaturedProducts,
-  getProductsByCategory
+  incrementProductViews
 };

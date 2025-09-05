@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Callback</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            text-align: center;
+            max-width: 400px;
+        }
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        h1 {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        p {
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+        .error {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h1>Processing...</h1>
+        <p>Please wait while we complete your authentication.</p>
+    </div>
+
+    <script>
+        // Get the authorization code from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+
+        if (error) {
+            // Handle OAuth error
+            document.querySelector('.container').innerHTML = `
+                <div class="error">
+                    <h1>Authentication Failed</h1>
+                    <p>Error: ${error}</p>
+                    <p>Please try again or contact support.</p>
+                </div>
+            `;
+            
+            // Close window after 3 seconds
+            setTimeout(() => {
+                window.close();
+            }, 3000);
+        } else if (code) {
+            // Send the authorization code back to the parent window
+            try {
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'GOOGLE_OAUTH_SUCCESS',
+                        code: code,
+                        state: state
+                    }, window.location.origin);
+                    
+                    // Show success message
+                    document.querySelector('.container').innerHTML = `
+                        <h1>Success!</h1>
+                        <p>Authentication completed successfully.</p>
+                        <p>You can close this window now.</p>
+                    `;
+                    
+                    // Close window after 2 seconds
+                    setTimeout(() => {
+                        window.close();
+                    }, 2000);
+                } else {
+                    // If no opener, redirect to main app
+                    window.location.href = '/?oauth_success=true&code=' + encodeURIComponent(code);
+                }
+            } catch (err) {
+                console.error('Error sending message to parent:', err);
+                document.querySelector('.container').innerHTML = `
+                    <div class="error">
+                        <h1>Error</h1>
+                        <p>Failed to complete authentication.</p>
+                        <p>Please try again.</p>
+                    </div>
+                `;
+            }
+        } else {
+            // No code or error parameter
+            document.querySelector('.container').innerHTML = `
+                <div class="error">
+                    <h1>Invalid Request</h1>
+                    <p>No authorization code received.</p>
+                    <p>Please try again.</p>
+                </div>
+            `;
+            
+            // Close window after 3 seconds
+            setTimeout(() => {
+                window.close();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# .gitignore file
+
+# Environment variables
+.env
+
+# Dependencies
+node_modules
