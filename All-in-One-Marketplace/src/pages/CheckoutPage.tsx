@@ -4,7 +4,120 @@ import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/api';
 import { Button } from '../components/ui/Button';
-import { CreditCard, MapPin, User, Mail, Phone } from 'lucide-react';
+import { CreditCard, MapPin, User, Mail, Phone, Check, Info, AlertTriangle, XCircle, X } from 'lucide-react';
+
+// Notification Component
+const Notification = ({ 
+  message, 
+  type = 'success', 
+  onClose, 
+  duration = 5000 
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  useEffect(() => {
+    setIsVisible(true);
+    
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300);
+    }, duration);
+    
+    return () => clearTimeout(timer);
+  }, [duration, onClose]);
+  
+  const typeStyles = {
+    success: {
+      bg: 'bg-green-50 border-green-200',
+      text: 'text-green-800',
+      icon: <Check className="w-5 h-5 text-green-500" />,
+      border: 'border-l-4 border-green-500'
+    },
+    error: {
+      bg: 'bg-red-50 border-red-200',
+      text: 'text-red-800',
+      icon: <XCircle className="w-5 h-5 text-red-500" />,
+      border: 'border-l-4 border-red-500'
+    },
+    info: {
+      bg: 'bg-blue-50 border-blue-200',
+      text: 'text-blue-800',
+      icon: <Info className="w-5 w-5 text-blue-500" />,
+      border: 'border-l-4 border-blue-500'
+    },
+    warning: {
+      bg: 'bg-amber-50 border-amber-200',
+      text: 'text-amber-800',
+      icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
+      border: 'border-l-4 border-amber-500'
+    }
+  };
+  
+  const currentStyle = typeStyles[type];
+  
+  return (
+    <div className={`fixed top-4 right-4 z-50 transition-all duration-300 transform ${
+      isVisible 
+        ? 'translate-x-0 opacity-100 scale-100' 
+        : 'translate-x-full opacity-0 scale-95'
+    }`}>
+      <div className={`${currentStyle.bg} ${currentStyle.border} rounded-lg shadow-lg p-4 min-w-80 max-w-sm border`}>
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            {currentStyle.icon}
+          </div>
+          <div className="ml-3 flex-1">
+            <p className={`text-sm font-medium ${currentStyle.text}`}>
+              {message}
+            </p>
+          </div>
+          <div className="ml-4 flex-shrink-0">
+            <button
+              onClick={() => {
+                setIsVisible(false);
+                setTimeout(onClose, 300);
+              }}
+              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className={`h-1 rounded-full transition-all duration-300 ${
+              type === 'success' ? 'bg-green-500' :
+              type === 'error' ? 'bg-red-500' :
+              type === 'info' ? 'bg-blue-500' : 'bg-amber-500'
+            }`}
+            style={{ 
+              width: isVisible ? '0%' : '100%',
+              transition: `width ${duration}ms linear`
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Notification Container
+const NotificationContainer = ({ notifications, removeNotification }) => {
+  return (
+    <>
+      {notifications.map(notification => (
+        <Notification
+          key={notification.id}
+          message={notification.message}
+          type={notification.type}
+          onClose={() => removeNotification(notification.id)}
+          duration={notification.duration}
+        />
+      ))}
+    </>
+  );
+};
 
 const CheckoutPage: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
@@ -30,6 +143,18 @@ const CheckoutPage: React.FC = () => {
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponError, setCouponError] = useState('');
+  
+  // Notification state
+  const [notifications, setNotifications] = useState([]);
+
+  const addNotification = (message, type = 'success', duration = 5000) => {
+    const id = Date.now() + Math.random();
+    setNotifications(prev => [...prev, { id, message, type, duration }]);
+  };
+
+  const removeNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   if (!isAuthenticated) {
     return (
@@ -99,10 +224,11 @@ const CheckoutPage: React.FC = () => {
       
       const response = await apiClient.createOrder(orderData);
       await clearCart();
+      addNotification('Order placed successfully!', 'success');
       navigate('/orders');
     } catch (error) {
       console.error('Order creation failed:', error);
-      alert('Failed to place order. Please try again.');
+      addNotification('Failed to place order. Please try again.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -124,13 +250,21 @@ const CheckoutPage: React.FC = () => {
     if (validCoupons[couponCode.toUpperCase()]) {
       const discountAmount = getTotalPrice() * validCoupons[couponCode.toUpperCase()];
       setDiscount(discountAmount);
+      addNotification(`Coupon applied! Saved $${discountAmount.toFixed(2)}`, 'success');
     } else {
       setCouponError('Invalid coupon code');
+      addNotification('Invalid coupon code', 'error');
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Notification Container */}
+      <NotificationContainer 
+        notifications={notifications} 
+        removeNotification={removeNotification} 
+      />
+      
       <div className="container mx-auto px-4">
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
         
@@ -151,7 +285,7 @@ const CheckoutPage: React.FC = () => {
                     placeholder="First Name"
                     value={formData.firstName}
                     onChange={handleInputChange}
-                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   />
                   <input
@@ -160,7 +294,7 @@ const CheckoutPage: React.FC = () => {
                     placeholder="Last Name"
                     value={formData.lastName}
                     onChange={handleInputChange}
-                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -171,7 +305,7 @@ const CheckoutPage: React.FC = () => {
                     placeholder="Email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   />
                   <input
@@ -180,7 +314,7 @@ const CheckoutPage: React.FC = () => {
                     placeholder="Phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -198,7 +332,7 @@ const CheckoutPage: React.FC = () => {
                   placeholder="Street Address"
                   value={formData.address}
                   onChange={handleInputChange}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 mb-4"
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4"
                   required
                 />
                 <div className="grid grid-cols-2 gap-4">
@@ -208,7 +342,7 @@ const CheckoutPage: React.FC = () => {
                     placeholder="City"
                     value={formData.city}
                     onChange={handleInputChange}
-                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   />
                   <input
@@ -217,7 +351,7 @@ const CheckoutPage: React.FC = () => {
                     placeholder="ZIP Code"
                     value={formData.zipCode}
                     onChange={handleInputChange}
-                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -233,7 +367,7 @@ const CheckoutPage: React.FC = () => {
                   name="paymentMethod"
                   value={formData.paymentMethod}
                   onChange={handleInputChange}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 mb-4"
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4"
                 >
                   <option value="card">Credit/Debit Card</option>
                   <option value="paypal">PayPal</option>
@@ -248,7 +382,7 @@ const CheckoutPage: React.FC = () => {
                       placeholder="Card Number"
                       value={formData.cardNumber}
                       onChange={handleInputChange}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       required
                     />
                     <div className="grid grid-cols-3 gap-4">
@@ -258,7 +392,7 @@ const CheckoutPage: React.FC = () => {
                         placeholder="MM/YY"
                         value={formData.expiryDate}
                         onChange={handleInputChange}
-                        className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                        className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         required
                       />
                       <input
@@ -267,7 +401,7 @@ const CheckoutPage: React.FC = () => {
                         placeholder="CVV"
                         value={formData.cvv}
                         onChange={handleInputChange}
-                        className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                        className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         required
                       />
                       <input
@@ -276,7 +410,7 @@ const CheckoutPage: React.FC = () => {
                         placeholder="Name on Card"
                         value={formData.cardName}
                         onChange={handleInputChange}
-                        className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
+                        className="p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         required
                       />
                     </div>
@@ -287,9 +421,16 @@ const CheckoutPage: React.FC = () => {
               <Button 
                 type="submit" 
                 disabled={isProcessing}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
               >
-                {isProcessing ? 'Processing...' : `Place Order - $${finalTotal.toFixed(2)}`}
+                {isProcessing ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Processing...
+                  </div>
+                ) : (
+                  `Place Order - $${finalTotal.toFixed(2)}`
+                )}
               </Button>
             </form>
           </div>
@@ -302,7 +443,16 @@ const CheckoutPage: React.FC = () => {
             <div className="space-y-3 mb-6">
               {items.map((item) => (
                 <div key={item.id} className="flex items-center space-x-3">
-                  <img src={item.image} alt={item.title} className="w-12 h-12 object-cover rounded" />
+                  <img 
+                    src={item.image} 
+                    alt={item.title} 
+                    className="w-12 h-12 object-cover rounded" 
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zMiA0OEM0MS45NDExIDQ4IDUwIDM5Ljk0MTEgNTAgMzJDNTAgMjQuMDU4OSA0MS45NDExIDE2IDMyIDE2QzIyLjA1ODkgMTYgMTQgMjQuMDU4OSAxNCAzMkMxNCAzOS45NDExIDIyLjA1ODkgNDggMzIgNDgiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+';
+                    }}
+                  />
                   <div className="flex-1">
                     <p className="font-medium text-sm">{item.title}</p>
                     <p className="text-gray-500 text-sm">Qty: {item.quantity}</p>
@@ -320,13 +470,22 @@ const CheckoutPage: React.FC = () => {
                   placeholder="Coupon code"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
-                  className="flex-1 p-2 border rounded focus:ring-2 focus:ring-green-500"
+                  className="flex-1 p-2 border rounded focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
-                <Button onClick={applyCoupon} variant="outline" className="px-4">
+                <Button 
+                  onClick={applyCoupon} 
+                  variant="outline" 
+                  className="px-4 whitespace-nowrap"
+                >
                   Apply
                 </Button>
               </div>
-              {couponError && <p className="text-red-500 text-sm mt-1">{couponError}</p>}
+              {couponError && (
+                <p className="text-red-500 text-sm mt-1 flex items-center">
+                  <XCircle className="h-4 w-4 mr-1" />
+                  {couponError}
+                </p>
+              )}
             </div>
             
             {/* Totals */}
@@ -352,7 +511,22 @@ const CheckoutPage: React.FC = () => {
               <div className="border-t pt-2">
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>${finalTotal.toFixed(2)}</span>
+                  <span className="text-green-600">${finalTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Security Badge */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+              <div className="flex items-center text-sm text-gray-600">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div className="ml-2">
+                  <p className="font-medium">Secure checkout</p>
+                  <p className="text-xs">All transactions are secure and encrypted</p>
                 </div>
               </div>
             </div>

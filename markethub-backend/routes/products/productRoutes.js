@@ -3,11 +3,12 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../../controllers/products/productController');
 const auth = require('../../middleware/auth');
+const optionalAuth = require('../../middleware/optionalAuth');
 
 // Public routes
 router.get('/', productController.getAllProducts);
 router.get('/featured', productController.getFeaturedProducts);
-router.get('/category/:category', productController.getProductsByCategory);
+router.get('/category/:category', optionalAuth, productController.getProductsByCategory);
 router.get('/:id', productController.getProductById);
 
 // Increment views for a product

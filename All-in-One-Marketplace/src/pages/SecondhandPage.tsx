@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 // Login Modal အတွက်လိုအပ်သော icon များကို ထပ်ထည့်ပါ
 import { Search, Grid, List, Recycle, Leaf, Award, Star, MapPin, Heart, Lock, X, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -170,6 +171,7 @@ const LoginRequiredModal = ({ isOpen, onClose, onGoToLogin }) => {
 
 // --- Main Page Component ---
 export const App = () => {
+    const { t } = useTranslation();
     // --- Authentication ---
     const { isAuthenticated } = useAuth();
  
@@ -243,16 +245,16 @@ export const App = () => {
                         <div>
                             <h1 className="text-3xl font-bold text-gray-800 flex items-center">
                                 <Recycle className="h-8 w-8 text-green-500 mr-3" />
-                                Second-hand Marketplace
+                                {t('secondhand.title')}
                             </h1>
-                            <p className="text-gray-500">Give items a second life while saving money and the planet</p>
+                            <p className="text-gray-500">{t('secondhand.subtitle')}</p>
                         </div>
                         <div className="flex-1 max-w-2xl">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search second-hand items..."
+                                    placeholder={t('common.search')}
                                     className="pl-10 pr-4 py-3 w-full rounded-full border border-gray-300 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                                 />
                             </div>
@@ -290,7 +292,7 @@ export const App = () => {
                         <Card className="p-6 sticky top-24">
                             <h3 className="font-semibold mb-4 flex items-center text-lg">
                                 <Grid className="h-5 w-5 mr-2 text-green-500" />
-                                Filters
+                                {t('common.filter')}
                             </h3>
                             <div className="space-y-6">
                                 <SearchFilters category="secondhand" />

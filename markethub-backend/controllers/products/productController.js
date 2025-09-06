@@ -3,6 +3,7 @@
 // Model ကို import လုပ်ခြင်း
 const Product = require('../../models/products/productModel');
 const User = require('../../models/users/userModel');
+const Comment = require('../../models/Comment');
 const { validationResult } = require('express-validator');
 
 // Get all products with pagination, search, and filtering
@@ -13,7 +14,7 @@ const getAllProducts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Build query object
-    let query = {};
+    let query = { quantity: { $gt: 0 } }; // Only show products with stock > 0
 
     // Search functionality
     if (req.query.search) {
@@ -113,7 +114,7 @@ const getAllProducts = async (req, res) => {
 const getFeaturedProducts = async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 6, 20);
-    const products = await Product.find({ featured: true })
+    const products = await Product.find({ featured: true, quantity: { $gt: 0 } })
       .populate('seller', 'username firstName lastName avatar rating')
       .limit(limit)
       .sort({ views: -1, createdAt: -1 });
@@ -132,6 +133,7 @@ const getProductsByCategory = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 12, 100);
     const skip = (page - 1) * limit;
+    const userId = req.user?.id; // Get user ID if authenticated
 
     // Build sort object
     let sort = { createdAt: -1 }; // default sort
@@ -140,20 +142,25 @@ const getProductsByCategory = async (req, res) => {
       sort = { [req.query.sortBy]: sortOrder };
     }
 
-    const products = await Product.find({ category })
+    const products = await Product.find({ category, quantity: { $gt: 0 } })
       .populate('seller', 'username firstName lastName avatar rating')
       .skip(skip)
       .limit(limit)
       .sort(sort)
       .lean();
 
-    // Add id field for frontend compatibility
-    const productsWithId = products.map(product => ({
-      ...product,
-      id: product._id.toString()
+    // Add id field, like status, and comment count for frontend compatibility
+    const productsWithId = await Promise.all(products.map(async product => {
+      const commentCount = await Comment.countDocuments({ productId: product._id });
+      return {
+        ...product,
+        id: product._id.toString(),
+        isLiked: userId && product.likes ? product.likes.some(likeId => likeId.toString() === userId) : false,
+        commentsCount: commentCount
+      };
     }));
 
-    const total = await Product.countDocuments({ category });
+    const total = await Product.countDocuments({ category, quantity: { $gt: 0 } });
     const totalPages = Math.ceil(total / limit);
 
     res.json({

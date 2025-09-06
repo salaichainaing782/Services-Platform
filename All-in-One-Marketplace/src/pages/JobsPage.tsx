@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Briefcase, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 
 const JobsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -18,7 +20,7 @@ const JobsPage: React.FC = () => {
         const res = await apiClient.getProductsByCategory('jobs', { page: 1, limit: 12 });
         setItems(res.products as any[]);
       } catch (e: any) {
-        setError(e?.message || 'Failed to load jobs');
+        setError(e?.message || t('common.loading'));
       } finally {
         setLoading(false);
       }
@@ -43,10 +45,10 @@ const JobsPage: React.FC = () => {
           >
             <h1 className="text-4xl font-extrabold flex items-center justify-center lg:justify-start gap-2 text-orange-600">
               <Briefcase className="h-9 w-9 animate-bounce" />
-              Jobs & Careers
+              {t('jobs.title')}
             </h1>
             <p className="text-gray-600 mt-2">
-              Find your dream role — full-time, part-time & remote opportunities.
+              {t('jobs.subtitle')}
             </p>
           </motion.div>
 
@@ -61,7 +63,7 @@ const JobsPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search jobs..."
+                placeholder={t('common.search')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10 pr-4 py-3 w-full rounded-full border border-gray-300 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -143,7 +145,7 @@ const JobsPage: React.FC = () => {
             transition={{ duration: 0.8 }}
             className="text-3xl font-bold text-white mb-4"
           >
-            Ready to Land Your Next Job?
+            {t('jobs.title')}
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -151,14 +153,14 @@ const JobsPage: React.FC = () => {
             transition={{ delay: 0.4, duration: 0.8 }}
             className="text-lg text-white/90 mb-8 max-w-2xl mx-auto"
           >
-            Browse opportunities and start your career journey today.
+            {t('jobs.subtitle')}
           </motion.p>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="px-8 py-4 text-lg font-semibold rounded-2xl bg-white text-orange-600 shadow hover:shadow-lg transition"
           >
-            Browse Jobs
+            {t('common.viewAll')}
           </motion.button>
         </div>
       </footer>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-// import { Link } from 'react-router-dom'; // Removed to fix the error
-import { ShoppingBag, Recycle, Briefcase, Plane, ArrowRight, Star, Users, Globe, ChevronRight, Sparkles, Zap, ShieldCheck, Leaf } from 'lucide-react';
+import { ShoppingBag, Recycle, Briefcase, Plane, ArrowRight, Star, Users, Globe, ChevronRight, Sparkles, Zap, ShieldCheck, Leaf, Heart, Clock, MapPin } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // --- Reusable Hooks & Components ---
 
@@ -91,7 +91,6 @@ const ParticleBackground = () => {
     return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
 };
 
-
 // AnimatedText component for revealing text
 const AnimatedText = ({ text, className = '' }) => {
     return (
@@ -143,23 +142,48 @@ const Counter = ({ value, label, icon: Icon }) => {
 
 // --- Main HomePage Component ---
 const HomePage = () => {
+    const { t } = useTranslation();
     const categories = [
-        { id: 'marketplace', title: 'Marketplace', description: 'Buy and sell new items with ease', icon: ShoppingBag, color: 'indigo' },
-        { id: 'secondhand', title: 'Second-hand', description: 'Find great deals on used items', icon: Recycle, color: 'green' },
-        { id: 'jobs', title: 'Jobs', description: 'Discover your next opportunity', icon: Briefcase, color: 'orange' },
-        { id: 'travel', title: 'Travel', description: 'Explore the world affordably', icon: Plane, color: 'sky' }
+        { id: 'marketplace', title: t('marketplace.title'), description: t('marketplace.description'), icon: ShoppingBag, color: 'indigo' },
+        { id: 'secondhand', title: t('secondhand.title'), description: t('secondhand.description'), icon: Recycle, color: 'green' },
+        { id: 'jobs', title: t('jobs.title'), description: t('jobs.description'), icon: Briefcase, color: 'orange' },
+        { id: 'travel', title: t('travel.title'), description: t('travel.description'), icon: Plane, color: 'sky' }
     ];
 
     const features = [
-        { icon: Zap, title: "AI-Powered", description: "Use our smart AI to generate product descriptions and find what you need faster." },
-        { icon: ShieldCheck, title: "Secure & Trusted", description: "Shop with confidence with our buyer protection and verified seller system." },
-        { icon: Leaf, title: "Eco-Friendly", description: "Make a positive impact by giving pre-loved items a new home." }
+        { icon: Zap, title: t('home.features.ai'), description: t('home.features.aiDesc') },
+        { icon: ShieldCheck, title: t('home.features.secure'), description: t('home.features.secureDesc') },
+        { icon: Leaf, title: t('home.features.eco'), description: t('home.features.ecoDesc') },
+        { icon: Heart, title: t('home.features.community'), description: t('home.features.communityDesc') },
+        { icon: Clock, title: t('home.features.fast'), description: t('home.features.fastDesc') },
+        { icon: MapPin, title: t('home.features.local'), description: t('home.features.localDesc') }
     ];
     
     const stats = [
-        { label: 'Active Users', value: '50K+', icon: Users },
-        { label: 'Countries', value: '100+', icon: Globe },
-        { label: 'Success Rate', value: '98%', icon: Star }
+        { label: t('home.stats.users'), value: '50K+', icon: Users },
+        { label: t('home.stats.countries'), value: '100+', icon: Globe },
+        { label: t('home.stats.success'), value: '98%', icon: Star }
+    ];
+
+    const testimonials = [
+        {
+            name: "မြန်မာမြတ်",
+            role: t('home.testimonials.seller'),
+            content: t('home.testimonials.content1'),
+            rating: 5
+        },
+        {
+            name: "ကျော်ထက်အောင်",
+            role: t('home.testimonials.buyer'),
+            content: t('home.testimonials.content2'),
+            rating: 5
+        },
+        {
+            name: "နှင်းသဉ္ဇာလှိုင်",
+            role: t('home.testimonials.traveler'),
+            content: t('home.testimonials.content3'),
+            rating: 5
+        }
     ];
 
     return (
@@ -196,17 +220,20 @@ const HomePage = () => {
                         <div className="max-w-4xl mx-auto text-center">
                             <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-white/50 backdrop-blur-sm border border-white/30 mb-8">
                                 <Sparkles className="w-4 h-4 mr-2 text-yellow-500" />
-                                <span className="text-sm font-medium text-indigo-900">The all-in-one platform for modern needs</span>
+                                <span className="text-sm font-medium text-indigo-900">{t('home.welcome')}</span>
                             </div>
                             
-                            <AnimatedText text="Your Platform for Everything" className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight" />
+                            <AnimatedText text={t('home.title')} className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight" />
                             
                             <p className="text-xl md:text-2xl mb-10 text-gray-600 max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '800ms', opacity: 0 }}>
-                                Buy, sell, work, and travel - all in one place. Connect with millions of users worldwide.
+                                {t('home.subtitle')}
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style={{ animationDelay: '1000ms', opacity: 0 }}>
                                 <a href="/marketplace" className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 transform hover:-translate-y-1">
-                                    Explore Now <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                                    {t('home.exploreNow')} <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                                </a>
+                                <a href="/signup" className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-indigo-600 bg-white border border-indigo-200 rounded-full shadow-lg hover:bg-gray-50 transition-all duration-300 transform hover:-translate-y-1">
+                                    {t('auth.signup')}
                                 </a>
                             </div>
                         </div>
@@ -217,15 +244,15 @@ const HomePage = () => {
                 <section className="py-24 bg-white">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-16">
-                            <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose Us?</h2>
-                            <p className="text-xl text-gray-600 max-w-2xl mx-auto">The ultimate platform designed for convenience, security, and sustainability.</p>
+                            <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('home.whyChooseUs')}</h2>
+                            <p className="text-xl text-gray-600 max-w-2xl mx-auto">{t('home.whyChooseDesc')}</p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                             {features.map((feature, index) => {
                                 const [ref, inView] = useInView({ threshold: 0.3, triggerOnce: true });
                                 return (
-                                    <div ref={ref} key={index} className={`text-center p-8 bg-gray-50 rounded-2xl transition-all duration-500 ${inView ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: `${index * 150}ms` }}>
-                                        <div className="w-16 h-16 mx-auto mb-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                                    <div ref={ref} key={index} className={`p-8 bg-gray-50 rounded-2xl transition-all duration-500 ${inView ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: `${index * 150}ms` }}>
+                                        <div className="w-16 h-16 mb-6 bg-indigo-100 rounded-full flex items-center justify-center">
                                             <feature.icon className="w-8 h-8 text-indigo-600" />
                                         </div>
                                         <h3 className="text-2xl font-bold text-gray-900 mb-3">{feature.title}</h3>
@@ -241,8 +268,8 @@ const HomePage = () => {
                 <section className="py-24 bg-slate-50">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-16">
-                            <h2 className="text-4xl font-bold text-gray-900 mb-4">One Platform, Infinite Possibilities</h2>
-                            <p className="text-xl text-gray-600 max-w-2xl mx-auto">From buying and selling to finding jobs and planning trips, we've got you covered.</p>
+                            <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('home.categoriesTitle')}</h2>
+                            <p className="text-xl text-gray-600 max-w-2xl mx-auto">{t('home.categoriesDesc')}</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                             {categories.map((category, index) => {
@@ -266,7 +293,7 @@ const HomePage = () => {
                                                     <h3 className="text-2xl font-bold text-gray-900 mb-2">{category.title}</h3>
                                                     <p className="text-gray-500 mb-6">{category.description}</p>
                                                     <div className="flex items-center text-indigo-600 font-semibold group-hover:translate-x-1 transition-transform duration-300">
-                                                        <span>Explore</span>
+                                                        <span>{t('home.exploreNow')}</span>
                                                         <ChevronRight className="w-5 h-5 ml-1" />
                                                     </div>
                                                 </div>
@@ -283,8 +310,8 @@ const HomePage = () => {
                 <section className="py-24 bg-white">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-16">
-                            <h2 className="text-4xl font-bold text-gray-900 mb-4">Trusted by a Growing Community</h2>
-                            <p className="text-xl text-gray-600 max-w-2xl mx-auto">Our numbers speak for themselves. Join thousands of satisfied users today.</p>
+                            <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('home.statsTitle')}</h2>
+                            <p className="text-xl text-gray-600 max-w-2xl mx-auto">{t('home.statsDesc')}</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                             {stats.map((stat) => (
@@ -294,17 +321,51 @@ const HomePage = () => {
                     </div>
                 </section>
 
+                {/* Testimonials Section */}
+                <section className="py-24 bg-indigo-50">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center mb-16">
+                            <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('home.testimonialsTitle')}</h2>
+                            <p className="text-xl text-gray-600 max-w-2xl mx-auto">{t('home.testimonialsDesc')}</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                            {testimonials.map((testimonial, index) => {
+                                const [ref, inView] = useInView({ threshold: 0.3, triggerOnce: true });
+                                return (
+                                    <div ref={ref} key={index} className={`bg-white p-8 rounded-2xl shadow-lg transition-all duration-500 ${inView ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: `${index * 150}ms` }}>
+                                        <div className="flex mb-4">
+                                            {[...Array(testimonial.rating)].map((_, i) => (
+                                                <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                                            ))}
+                                        </div>
+                                        <p className="text-gray-600 mb-6 italic">"{testimonial.content}"</p>
+                                        <div>
+                                            <div className="font-semibold text-gray-900">{testimonial.name}</div>
+                                            <div className="text-sm text-gray-500">{testimonial.role}</div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </section>
+
                 {/* CTA Section */}
                 <section className="py-24 bg-gradient-to-r from-indigo-600 to-purple-600 text-white relative">
                     <ParticleBackground />
                     <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                        <h2 className="text-4xl font-bold mb-6">Ready to Get Started?</h2>
+                        <h2 className="text-4xl font-bold mb-6">{t('home.ctaTitle')}</h2>
                         <p className="text-xl mb-10 text-indigo-100 max-w-2xl mx-auto">
-                            Join thousands of users who are already buying, selling, working, and traveling with us.
+                            {t('home.ctaDesc')}
                         </p>
-                        <a href="/signup" className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-indigo-600 bg-white rounded-full shadow-2xl hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1">
-                            Create Your Account <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-                        </a>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <a href="/signup" className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-indigo-600 bg-white rounded-full shadow-2xl hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1">
+                                {t('auth.signup')} <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                            </a>
+                            <a href="/marketplace" className="group inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-indigo-700/50 border border-indigo-300 rounded-full shadow-2xl hover:bg-indigo-700 transition-all duration-300 transform hover:-translate-y-1">
+                                {t('home.browseMarketplace')}
+                            </a>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -313,4 +374,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-

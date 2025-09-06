@@ -86,6 +86,15 @@ const productSchema = new mongoose.Schema({
   },
   duration: {
     type: String
+  },
+  // Social features
+  likes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  comments: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

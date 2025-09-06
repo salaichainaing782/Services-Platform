@@ -17,8 +17,125 @@ import {
   Phone,
   Mail,
   Download,
-  Printer
+  Printer,
+  Check,
+  Info,
+  AlertTriangle,
+  XCircle
 } from 'lucide-react';
+
+// Notification Component
+const Notification = ({ 
+  message, 
+  type = 'success', 
+  onClose, 
+  duration = 5000 
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  useEffect(() => {
+    setIsVisible(true);
+    
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300);
+    }, duration);
+    
+    return () => clearTimeout(timer);
+  }, [duration, onClose]);
+  
+  const typeStyles = {
+    success: {
+      bg: 'bg-green-50 border-green-200',
+      text: 'text-green-800',
+      icon: <Check className="w-5 h-5 text-green-500" />,
+      border: 'border-l-4 border-green-500'
+    },
+    error: {
+      bg: 'bg-red-50 border-red-200',
+      text: 'text-red-800',
+      icon: <XCircle className="w-5 h-5 text-red-500" />,
+      border: 'border-l-4 border-red-500'
+    },
+    info: {
+      bg: 'bg-blue-50 border-blue-200',
+      text: 'text-blue-800',
+      icon: <Info className="w-5 w-5 text-blue-500" />,
+      border: 'border-l-4 border-blue-500'
+    },
+    warning: {
+      bg: 'bg-amber-50 border-amber-200',
+      text: 'text-amber-800',
+      icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
+      border: 'border-l-4 border-amber-500'
+    }
+  };
+  
+  const currentStyle = typeStyles[type];
+  
+  return (
+    <div className={`fixed top-4 right-4 z-50 transition-all duration-300 transform ${
+      isVisible 
+        ? 'translate-x-0 opacity-100 scale-100' 
+        : 'translate-x-full opacity-0 scale-95'
+    }`}>
+      <div className={`${currentStyle.bg} ${currentStyle.border} rounded-lg shadow-lg p-4 min-w-80 max-w-sm border`}>
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            {currentStyle.icon}
+          </div>
+          <div className="ml-3 flex-1">
+            <p className={`text-sm font-medium ${currentStyle.text}`}>
+              {message}
+            </p>
+          </div>
+          <div className="ml-4 flex-shrink-0">
+            <button
+              onClick={() => {
+                setIsVisible(false);
+                setTimeout(onClose, 300);
+              }}
+              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className={`h-1 rounded-full transition-all duration-300 ${
+              type === 'success' ? 'bg-green-500' :
+              type === 'error' ? 'bg-red-500' :
+              type === 'info' ? 'bg-blue-500' : 'bg-amber-500'
+            }`}
+            style={{ 
+              width: isVisible ? '0%' : '100%',
+              transition: `width ${duration}ms linear`
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Notification Container
+const NotificationContainer = ({ notifications, removeNotification }) => {
+  return (
+    <>
+      {notifications.map(notification => (
+        <Notification
+          key={notification.id}
+          message={notification.message}
+          type={notification.type}
+          onClose={() => removeNotification(notification.id)}
+          duration={notification.duration}
+        />
+      ))}
+    </>
+  );
+};
 
 interface Order {
   id: string;
@@ -70,6 +187,18 @@ const OrderHistoryPage: React.FC = () => {
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  
+  // Notification state
+  const [notifications, setNotifications] = useState([]);
+
+  const addNotification = (message, type = 'success', duration = 5000) => {
+    const id = Date.now() + Math.random();
+    setNotifications(prev => [...prev, { id, message, type, duration }]);
+  };
+
+  const removeNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -82,8 +211,10 @@ const OrderHistoryPage: React.FC = () => {
       setLoading(true);
       const response = await apiClient.getUserOrders();
       setOrders(response.orders || []);
+      addNotification('Orders loaded successfully', 'success');
     } catch (error) {
       console.error('Failed to load orders:', error);
+      addNotification('Failed to load orders', 'error');
     } finally {
       setLoading(false);
     }
@@ -108,8 +239,10 @@ const OrderHistoryPage: React.FC = () => {
       await loadOrders();
       setShowCancelModal(false);
       setOrderToCancel(null);
+      addNotification('Order cancelled successfully', 'success');
     } catch (error) {
       console.error('Failed to cancel order:', error);
+      addNotification('Failed to cancel order', 'error');
     } finally {
       setCancelLoading(false);
     }
@@ -120,9 +253,11 @@ const OrderHistoryPage: React.FC = () => {
       for (const item of order.items) {
         await apiClient.addToCart(item.id, item.quantity);
       }
+      addNotification('Items added to cart for reorder', 'success');
       window.location.href = '/cart';
     } catch (error) {
       console.error('Failed to reorder:', error);
+      addNotification('Failed to add items to cart', 'error');
     }
   };
 
@@ -144,9 +279,13 @@ const OrderHistoryPage: React.FC = () => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        addNotification('Invoice downloaded successfully', 'success');
+      } else {
+        addNotification('Failed to download invoice', 'error');
       }
     } catch (error) {
       console.error('Failed to download invoice:', error);
+      addNotification('Failed to download invoice', 'error');
     }
   };
 
@@ -233,6 +372,12 @@ const OrderHistoryPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Notification Container */}
+      <NotificationContainer 
+        notifications={notifications} 
+        removeNotification={removeNotification} 
+      />
+      
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Order History</h1>
@@ -318,7 +463,7 @@ const OrderHistoryPage: React.FC = () => {
                                     )}
                                   </div>
                                   <div className="flex-1">
-                                    <h4 className="font-medium text-gray-900">{item.title}</h4>
+                                    <h4 className="font-medium text-gray-909">{item.title}</h4>
                                     <p className="text-gray-600 text-sm">Quantity: {item.quantity}</p>
                                   </div>
                                   <p className="font-semibold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
@@ -592,11 +737,11 @@ const OrderHistoryPage: React.FC = () => {
                       <div className="space-y-2">
                         <div className="flex items-center text-sm text-blue-700">
                           <Phone className="h-4 w-4 mr-2" />
-                          <span>+1 (555) 123-4567</span>
+                          <span>+95 945 700 2063</span>
                         </div>
                         <div className="flex items-center text-sm text-blue-700">
                           <Mail className="h-4 w-4 mr-2" />
-                          <span>support@example.com</span>
+                          <span>lovenaing386@gmail.com</span>
                         </div>
                       </div>
                     </div>

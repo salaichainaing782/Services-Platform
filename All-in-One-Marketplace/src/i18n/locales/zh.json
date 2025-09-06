@@ -1,0 +1,197 @@
+{
+  "dashboard": {
+    "overview": "概览",
+    "myProducts": "我的商品",
+    "orders": "订单",
+    "favorites": "收藏夹",
+    "profile": "个人资料设置",
+    "logout": "退出登录"
+  },
+  "products": {
+    "title": "标题",
+    "price": "价格",
+    "stock": "库存",
+    "addStock": "添加库存",
+    "outOfStock": "缺货",
+    "lowStock": "库存不足",
+    "addProduct": "添加商品",
+    "editProduct": "编辑商品",
+    "deleteProduct": "删除商品",
+    "viewProduct": "查看商品"
+  },
+  "orders": {
+    "confirmOrder": "确认订单",
+    "cancelOrder": "取消订单",
+    "pending": "待处理",
+    "confirmed": "已确认",
+    "cancelled": "已取消"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "loading": "加载中...",
+    "noData": "暂无数据",
+    "search": "搜索",
+    "filter": "筛选",
+    "sort": "排序",
+    "viewAll": "查看全部",
+    "addToCart": "加入购物车",
+    "buyNow": "立即购买",
+    "quantity": "数量",
+    "total": "总计",
+    "subtotal": "小计",
+    "checkout": "结算",
+    "backToHome": "返回首页",
+    "continueShopping": "继续购物"
+  },
+  "home": {
+    "title": "一站式购物平台",
+    "subtitle": "您的一站式购物目的地",
+    "marketplace": "商城",
+    "marketplaceDesc": "买卖商品",
+    "secondhand": "二手商品",
+    "secondhandDesc": "二手优质商品",
+    "jobs": "工作",
+    "jobsDesc": "寻找您的理想工作",
+    "travel": "旅游",
+    "travelDesc": "探索世界",
+    "featuredProducts": "精选商品",
+    "exploreCategories": "探索分类"
+  },
+  "marketplace": {
+    "title": "商城",
+    "subtitle": "从可信赖的卖家那里发现优质商品",
+    "allCategories": "所有分类",
+    "priceRange": "价格区间",
+    "sortBy": "排序方式",
+    "newest": "最新",
+    "priceAsc": "价格：从低到高",
+    "priceDesc": "价格：从高到低",
+    "rating": "评分"
+  },
+  "secondhand": {
+    "title": "二手市场",
+    "subtitle": "在二手商品中寻找优惠",
+    "condition": "成色",
+    "excellent": "极佳",
+    "good": "良好",
+    "fair": "一般",
+    "preOwned": "二手"
+  },
+  "jobs": {
+    "title": "工作机会",
+    "subtitle": "寻找您的下一个职业机会",
+    "jobType": "工作类型",
+    "fullTime": "全职",
+    "partTime": "兼职",
+    "contract": "合同工",
+    "remote": "远程工作",
+    "location": "地点",
+    "salary": "薪资",
+    "applyNow": "立即申请",
+    "company": "公司"
+  },
+  "travel": {
+    "title": "旅游与冒险",
+    "subtitle": "精选旅程、航班、酒店和全球冒险",
+    "exploreWorld": "探索世界",
+    "description": "发现独特的目的地和为您量身定制的难忘旅行套餐。",
+    "readyForJourney": "准备好开始您的下一次旅程了吗？",
+    "bookExperiences": "预订难忘的体验，今天就开始探索世界。",
+    "startBooking": "开始预订",
+    "worldwide": "全球",
+    "allAds": "所有广告",
+    "hotels": "酒店",
+    "restaurants": "餐厅",
+    "beaches": "海滩",
+    "tours": "旅游团",
+    "services": "服务"
+  },
+  "cart": {
+    "title": "购物车",
+    "emptyCart": "您的购物车是空的",
+    "emptyCartDesc": "添加一些商品开始购物",
+    "removeItem": "移除商品",
+    "updateQuantity": "更新数量",
+    "proceedToCheckout": "去结算"
+  },
+  "checkout": {
+    "title": "结算",
+    "orderSummary": "订单摘要",
+    "shippingInfo": "配送信息",
+    "paymentMethod": "支付方式",
+    "placeOrder": "下单",
+    "fullName": "全名",
+    "address": "地址",
+    "city": "城市",
+    "phone": "电话号码",
+    "email": "邮箱"
+  },
+  "orderHistory": {
+    "title": "订单历史",
+    "orderNumber": "订单号",
+    "orderDate": "订单日期",
+    "status": "状态",
+    "items": "商品",
+    "reorder": "重新下单",
+    "downloadInvoice": "下载发票",
+    "noOrders": "未找到订单"
+  },
+  "orderSuccess": {
+    "title": "订单成功！",
+    "thankYou": "感谢您的订单",
+    "orderConfirmed": "您的订单已确认并正在处理中",
+    "orderNumber": "订单号",
+    "viewOrders": "查看我的订单"
+  },
+  "postAd": {
+    "title": "发布广告",
+    "productTitle": "商品标题",
+    "description": "描述",
+    "category": "分类",
+    "uploadImages": "上传图片",
+    "postAd": "发布广告",
+    "selectCategory": "选择分类"
+  },
+  "productDetail": {
+    "description": "描述",
+    "specifications": "规格",
+    "reviews": "评价",
+    "seller": "卖家",
+    "inStock": "有库存",
+    "addToFavorites": "添加到收藏夹",
+    "removeFromFavorites": "从收藏夹移除"
+  },
+  "auth": {
+    "login": "登录",
+    "signup": "注册",
+    "email": "邮箱",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "fullName": "全名",
+    "dontHaveAccount": "还没有账户？",
+    "alreadyHaveAccount": "已有账户？",
+    "signInWithGoogle": "使用Google登录",
+    "signUpWithGoogle": "使用Google注册",
+    "forgotPassword": "忘记密码？"
+  },
+  "admin": {
+    "title": "管理员仪表板",
+    "users": "用户",
+    "allProducts": "所有商品",
+    "allOrders": "所有订单",
+    "statistics": "统计",
+    "manageUsers": "管理用户",
+    "manageProducts": "管理商品",
+    "manageOrders": "管理订单"
+  },
+  "seller": {
+    "title": "卖家仪表板",
+    "myOrders": "我的订单",
+    "updateStatus": "更新状态",
+    "orderDetails": "订单详情",
+    "customerInfo": "客户信息"
+  }
+}

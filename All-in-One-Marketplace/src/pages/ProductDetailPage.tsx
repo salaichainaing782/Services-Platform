@@ -4,10 +4,124 @@ import { apiClient, Product } from '../services/api';
 import { Button } from '../components/ui/Button';
 import { 
   Star, Eye, Heart, ChevronLeft, MapPin, Lock, X, LogIn,
-  ShoppingCart, Check, ArrowRight, Home, Store
+  ShoppingCart, Check, ArrowRight, Home, Store, Info, AlertTriangle,
+  CheckCircle, XCircle, Bell
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+
+// Notification Component
+const Notification = ({ 
+  message, 
+  type = 'success', 
+  onClose, 
+  duration = 5000 
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  useEffect(() => {
+    setIsVisible(true);
+    
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300);
+    }, duration);
+    
+    return () => clearTimeout(timer);
+  }, [duration, onClose]);
+  
+  const typeStyles = {
+    success: {
+      bg: 'bg-green-50 border-green-200',
+      text: 'text-green-800',
+      icon: <CheckCircle className="w-5 h-5 text-green-500" />,
+      border: 'border-l-4 border-green-500'
+    },
+    error: {
+      bg: 'bg-red-50 border-red-200',
+      text: 'text-red-800',
+      icon: <XCircle className="w-5 h-5 text-red-500" />,
+      border: 'border-l-4 border-red-500'
+    },
+    info: {
+      bg: 'bg-blue-50 border-blue-200',
+      text: 'text-blue-800',
+      icon: <Info className="w-5 h-5 text-blue-500" />,
+      border: 'border-l-4 border-blue-500'
+    },
+    warning: {
+      bg: 'bg-amber-50 border-amber-200',
+      text: 'text-amber-800',
+      icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
+      border: 'border-l-4 border-amber-500'
+    }
+  };
+  
+  const currentStyle = typeStyles[type];
+  
+  return (
+    <div className={`fixed top-4 right-4 z-50 transition-all duration-300 transform ${
+      isVisible 
+        ? 'translate-x-0 opacity-100 scale-100' 
+        : 'translate-x-full opacity-0 scale-95'
+    }`}>
+      <div className={`${currentStyle.bg} ${currentStyle.border} rounded-lg shadow-lg p-4 min-w-80 max-w-sm border`}>
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            {currentStyle.icon}
+          </div>
+          <div className="ml-3 flex-1">
+            <p className={`text-sm font-medium ${currentStyle.text}`}>
+              {message}
+            </p>
+          </div>
+          <div className="ml-4 flex-shrink-0">
+            <button
+              onClick={() => {
+                setIsVisible(false);
+                setTimeout(onClose, 300);
+              }}
+              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
+          <div 
+            className={`h-1 rounded-full transition-all duration-300 ${
+              type === 'success' ? 'bg-green-500' :
+              type === 'error' ? 'bg-red-500' :
+              type === 'info' ? 'bg-blue-500' : 'bg-amber-500'
+            }`}
+            style={{ 
+              width: isVisible ? '0%' : '100%',
+              transition: `width ${duration}ms linear`
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Notification Container
+const NotificationContainer = ({ notifications, removeNotification }) => {
+  return (
+    <>
+      {notifications.map(notification => (
+        <Notification
+          key={notification.id}
+          message={notification.message}
+          type={notification.type}
+          onClose={() => removeNotification(notification.id)}
+          duration={notification.duration}
+        />
+      ))}
+    </>
+  );
+};
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams();
@@ -24,6 +138,18 @@ const ProductDetailPage: React.FC = () => {
   const [isToggling, setIsToggling] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false);
+  
+  // Notification state
+  const [notifications, setNotifications] = useState([]);
+
+  const addNotification = (message, type = 'success', duration = 5000) => {
+    const id = Date.now() + Math.random();
+    setNotifications(prev => [...prev, { id, message, type, duration }]);
+  };
+
+  const removeNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -41,6 +167,7 @@ const ProductDetailPage: React.FC = () => {
           setProduct(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
         } catch (e) {
           console.error('Failed to increment view count:', e);
+          addNotification('Failed to update view count', 'error');
         }
         
         // Load related products
@@ -49,6 +176,7 @@ const ProductDetailPage: React.FC = () => {
           setRelatedProducts(related.products.filter((relatedProduct: Product) => relatedProduct.id !== p.id));
         } catch (e) {
           console.error('Failed to load related products:', e);
+          addNotification('Failed to load related products', 'warning');
         }
         
         // Check if product is in user's favorites
@@ -59,10 +187,13 @@ const ProductDetailPage: React.FC = () => {
             setIsFavorite(isInFavorites);
           } catch (e) {
             console.error('Failed to check favorites:', e);
+            addNotification('Failed to load favorites', 'warning');
           }
         }
       } catch (e: any) {
-        setError(e?.message || 'Failed to load product');
+        const errorMsg = e?.message || 'Failed to load product';
+        setError(errorMsg);
+        addNotification(errorMsg, 'error');
       } finally {
         setLoading(false);
       }
@@ -73,6 +204,7 @@ const ProductDetailPage: React.FC = () => {
   const handleFavoriteClick = async () => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
+      addNotification('Please login to add favorites', 'info');
       return;
     }
     
@@ -82,8 +214,15 @@ const ProductDetailPage: React.FC = () => {
       setIsToggling(true);
       const response = await apiClient.toggleFavorite(id);
       setIsFavorite(response.isFavorite);
+      
+      if (response.isFavorite) {
+        addNotification('Added to favorites!', 'success');
+      } else {
+        addNotification('Removed from favorites', 'info');
+      }
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
+      addNotification('Failed to update favorites', 'error');
     } finally {
       setIsToggling(false);
     }
@@ -93,6 +232,7 @@ const ProductDetailPage: React.FC = () => {
     if (!product) return;
     if (!isAuthenticated) {
       setShowLoginModal(true);
+      addNotification('Please login to add to cart', 'info');
       return;
     }
     
@@ -105,10 +245,12 @@ const ProductDetailPage: React.FC = () => {
         image: product.image
       }, qty);
       
-      // Show success modal instead of alert
+      // Show success notification
+      addNotification(`Added ${qty} ${qty > 1 ? 'items' : 'item'} to cart!`, 'success');
       setShowCartModal(true);
     } catch (error) {
       console.error('Failed to add to cart:', error);
+      addNotification('Failed to add to cart', 'error');
     } finally {
       setBuying(false);
     }
@@ -147,6 +289,12 @@ const ProductDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
+      {/* Notification Container */}
+      <NotificationContainer 
+        notifications={notifications} 
+        removeNotification={removeNotification} 
+      />
+      
       {/* Breadcrumb */}
       <div className="bg-white shadow-sm">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -236,7 +384,7 @@ const ProductDetailPage: React.FC = () => {
                 <button 
                   onClick={handleFavoriteClick}
                   disabled={isToggling}
-                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
                   aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                 >
                   <Heart className={`h-6 w-6 ${isFavorite ? 'fill-current text-red-500' : ''}`} />
@@ -301,9 +449,19 @@ const ProductDetailPage: React.FC = () => {
               <Button
                 onClick={handleBuy}
                 disabled={buying || (product.quantity !== undefined && product.quantity <= 0)}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {buying ? 'Adding...' : 'Add to Cart'}
+                {buying ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    Add to Cart
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -333,7 +491,7 @@ const ProductDetailPage: React.FC = () => {
                     />
                   </div>
                   <div className="p-4">
-                    <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{relatedProduct.title}</h3>
+                    <h3 className="font-medium text-gray-909 mb-1 line-clamp-2">{relatedProduct.title}</h3>
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-bold text-gray-900">
                         ${typeof relatedProduct.price === 'number' ? relatedProduct.price.toFixed(2) : parseFloat(relatedProduct.price || 0).toFixed(2)}

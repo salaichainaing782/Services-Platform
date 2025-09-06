@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 
 const LoginPage: React.FC = () => {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +25,7 @@ const LoginPage: React.FC = () => {
     try {
       await login(email, password);
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || t('auth.login'));
     } finally {
       setLoading(false);
     }
@@ -56,10 +58,10 @@ const LoginPage: React.FC = () => {
               window.removeEventListener('message', handleMessage);
               window.location.href = '/dashboard';
             } else {
-              setError(tokenData.message || 'Google login failed');
+              setError(tokenData.message || t('auth.signInWithGoogle'));
             }
           } catch (err: any) {
-            setError('Google login failed');
+            setError(t('auth.signInWithGoogle'));
           } finally {
             setLoading(false);
             popup?.close();
@@ -75,7 +77,7 @@ const LoginPage: React.FC = () => {
         );
       }
     } catch (err: any) {
-      setError('Failed to start Google login');
+      setError(t('auth.signInWithGoogle'));
       setLoading(false);
     }
   };
@@ -84,14 +86,14 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">Welcome back</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign in to your account to continue</p>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">{t('auth.login')}</h2>
+          <p className="mt-2 text-sm text-gray-600">{t('auth.login')}</p>
         </div>
         
         <Card>
           <CardHeader>
-            <CardTitle>Sign in to MarketHub</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
+            <CardTitle>{t('auth.login')}</CardTitle>
+            <CardDescription>{t('auth.login')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <Button 
@@ -118,7 +120,7 @@ const LoginPage: React.FC = () => {
                   fill="#EA4335"
                 />
               </svg>
-              Continue with Google
+              {t('auth.signInWithGoogle')}
             </Button>
             
             <div className="relative">
@@ -126,13 +128,13 @@ const LoginPage: React.FC = () => {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-muted-foreground">Or continue with email</span>
+                <span className="bg-white px-2 text-muted-foreground">{t('auth.email')}</span>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{t('auth.email')}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -144,13 +146,13 @@ const LoginPage: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
-                    placeholder="Enter your email"
+                    placeholder={t('auth.email')}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -162,7 +164,7 @@ const LoginPage: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-10"
-                    placeholder="Enter your password"
+                    placeholder={t('auth.password')}
                   />
                   <button
                     type="button"
@@ -192,11 +194,11 @@ const LoginPage: React.FC = () => {
                     type="checkbox"
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
+                  <Label htmlFor="remember-me" className="text-sm">{t('auth.login')}</Label>
                 </div>
                 <div className="text-sm">
                   <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                    Forgot your password?
+                    {t('auth.forgotPassword')}
                   </a>
                 </div>
               </div>
@@ -210,7 +212,7 @@ const LoginPage: React.FC = () => {
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 ) : (
                   <>
-                    Sign in
+                    {t('auth.login')}
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
                   </>
                 )}
@@ -219,9 +221,9 @@ const LoginPage: React.FC = () => {
 
             <div className="text-center">
               <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
+                {t('auth.dontHaveAccount')}{' '}
                 <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                  Sign up here
+                  {t('auth.signup')}
                 </Link>
               </p>
             </div>

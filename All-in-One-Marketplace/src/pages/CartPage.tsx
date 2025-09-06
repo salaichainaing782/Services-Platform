@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 
 const CartPage: React.FC = () => {
+  const { t } = useTranslation();
   const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -33,10 +35,10 @@ const CartPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Please Login</h2>
-          <p className="text-gray-600 mb-6">You need to login to view your cart</p>
+          <h2 className="text-2xl font-bold mb-4">{t('auth.login')}</h2>
+          <p className="text-gray-600 mb-6">{t('auth.login')}</p>
           <Link to="/login">
-            <Button>Go to Login</Button>
+            <Button>{t('auth.login')}</Button>
           </Link>
         </div>
       </div>
@@ -48,10 +50,10 @@ const CartPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
-          <p className="text-gray-600 mb-6">Add some products to get started</p>
+          <h2 className="text-2xl font-bold mb-4">{t('cart.emptyCart')}</h2>
+          <p className="text-gray-600 mb-6">{t('cart.emptyCartDesc')}</p>
           <Link to="/marketplace">
-            <Button>Continue Shopping</Button>
+            <Button>{t('common.continueShopping')}</Button>
           </Link>
         </div>
       </div>
@@ -66,9 +68,9 @@ const CartPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Shopping Cart</h1>
+          <h1 className="text-3xl font-bold">{t('cart.title')}</h1>
           <Button onClick={handleClearCart} variant="outline" className="text-red-600" disabled={loading}>
-            {loading ? 'Clearing...' : 'Clear Cart'}
+            {loading ? t('common.loading') : t('cart.removeItem')}
           </Button>
         </div>
 
@@ -119,10 +121,10 @@ const CartPage: React.FC = () => {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-              <h2 className="text-xl font-bold mb-4">Order Summary</h2>
+              <h2 className="text-xl font-bold mb-4">{t('checkout.orderSummary')}</h2>
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between">
-                  <span>Subtotal</span>
+                  <span>{t('common.subtotal')}</span>
                   <span>${getTotalPrice().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -131,13 +133,13 @@ const CartPage: React.FC = () => {
                 </div>
                 <div className="border-t pt-3">
                   <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
+                    <span>{t('common.total')}</span>
                     <span>${getTotalPrice().toFixed(2)}</span>
                   </div>
                 </div>
               </div>
               <Button onClick={handleCheckout} className="w-full bg-green-600 hover:bg-green-700">
-                Proceed to Checkout
+                {t('cart.proceedToCheckout')}
               </Button>
             </div>
           </div>

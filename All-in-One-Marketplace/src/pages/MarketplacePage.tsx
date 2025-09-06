@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom'; // useNavigate အစား Link ကိုသုံးပါမည်
 import { Search, Grid, List, Filter, X, Bot, Eye } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiClient, Product, Category } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 
@@ -99,6 +100,7 @@ const AnimatedText = ({ text, className = '' }: { text: string; className?: stri
 
 // --- Main Marketplace Page Component ---
 const MarketplacePage = () => {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +161,7 @@ const MarketplacePage = () => {
             setHasMore(true);
         }
       } catch (e: any) {
-        setError(e.message || 'Failed to fetch products');
+        setError(e.message || t('common.loading'));
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -236,10 +238,10 @@ const MarketplacePage = () => {
   };
 
   const sortOptions = [
-    { value: 'default', label: 'Default Sorting' },
-    { value: 'price-asc', label: 'Price: Low to High' },
-    { value: 'price-desc', label: 'Price: High to Low' },
-    { value: 'rating-desc', label: 'Highest Rated' }
+    { value: 'default', label: t('marketplace.sortBy') },
+    { value: 'price-asc', label: t('marketplace.priceAsc') },
+    { value: 'price-desc', label: t('marketplace.priceDesc') },
+    { value: 'rating-desc', label: t('marketplace.rating') }
   ];
 
   return (
@@ -264,14 +266,14 @@ const MarketplacePage = () => {
       <header className="py-10 bg-gradient-to-br from-indigo-50 via-white to-purple-50 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22%23d9e2ff%22%20fill-opacity%3D%220.4%22%20fill-rule%3D%22evenodd%22%3E%3Cpath%20d%3D%22M0%2040L40%200H20L0%2020M40%2040V20L20%2040%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50"></div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
-          <AnimatedText text="Modern Marketplace" className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-4 tracking-tight"/>
+          <AnimatedText text={t('marketplace.title')} className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-4 tracking-tight"/>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '600ms', opacity: 0 }}>
-            Discover amazing products from trusted sellers worldwide. From electronics to fashion, find everything you need.
+            {t('marketplace.subtitle')}
           </p>
           <div className="mt-8 max-w-xl mx-auto animate-fade-in-up" style={{ animationDelay: '800ms', opacity: 0 }}>
             <div className="relative">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input type="text" placeholder="Search for products, brands and more" value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="w-full pl-14 pr-4 py-4 rounded-full border-2 border-transparent bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
+              <input type="text" placeholder={t('common.search')} value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="w-full pl-14 pr-4 py-4 rounded-full border-2 border-transparent bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
             </div>
           </div>
         </div>
@@ -282,10 +284,10 @@ const MarketplacePage = () => {
             {/* Filters Sidebar */}
             <aside className="lg:w-72 flex-shrink-0">
                 <Card className="p-6 sticky top-8">
-                    <h3 className="font-bold text-xl mb-6 flex items-center"><Filter className="mr-2 h-5 w-5 text-indigo-500"/>Filters</h3>
+                    <h3 className="font-bold text-xl mb-6 flex items-center"><Filter className="mr-2 h-5 w-5 text-indigo-500"/>{t('common.filter')}</h3>
                        <div className="space-y-6">
                             <div>
-                                <h4 className="font-semibold mb-3 text-gray-800">Price Range</h4>
+                                <h4 className="font-semibold mb-3 text-gray-800">{t('marketplace.priceRange')}</h4>
                                 <div className="flex items-center space-x-2">
                                     <input type="number" placeholder="$ Min" value={priceRange.min} onChange={(e) => handlePriceRangeChange('min', e.target.value)} className="w-full p-2 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                                     <span className="text-gray-500">-</span>
@@ -293,7 +295,7 @@ const MarketplacePage = () => {
                                 </div>
                             </div>
                             <div className="border-t pt-6">
-                                <h4 className="font-semibold mb-3 text-gray-800">Categories</h4>
+                                <h4 className="font-semibold mb-3 text-gray-800">{t('marketplace.allCategories')}</h4>
                                 <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                                     {categories.map(cat => (
                                         <label key={cat.id} className="flex items-center space-x-3 cursor-pointer p-1 rounded-md hover:bg-indigo-50">
@@ -310,7 +312,7 @@ const MarketplacePage = () => {
             {/* Products Grid */}
             <div className="flex-1">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 bg-white/60 backdrop-blur-sm p-4 rounded-xl shadow-sm">
-                    <p className="text-gray-600">Showing <span className="font-bold text-gray-800">{items.length}</span> products</p>
+                    <p className="text-gray-600">{t('common.viewAll')} <span className="font-bold text-gray-800">{items.length}</span> {t('products.title')}</p>
                     <div className="flex items-center gap-4">
                          <select value={sortBy} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                            {sortOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -372,11 +374,11 @@ const MarketplacePage = () => {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Loading...
+                                        {t('common.loading')}
                                     </>
                                 ) : (
                                     <>
-                                        Load More Products
+                                        {t('common.viewAll')}
                                         <svg className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                                         </svg>
@@ -392,8 +394,8 @@ const MarketplacePage = () => {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
-                                <p className="text-gray-600 font-medium">You've seen all products!</p>
-                                <p className="text-sm text-gray-500">Check back later for new listings</p>
+                                <p className="text-gray-600 font-medium">{t('common.noData')}</p>
+                                <p className="text-sm text-gray-500">{t('common.continueShopping')}</p>
                             </div>
                         )
                     )}

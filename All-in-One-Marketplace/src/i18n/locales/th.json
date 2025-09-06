@@ -1,0 +1,197 @@
+{
+  "dashboard": {
+    "overview": "ภาพรวม",
+    "myProducts": "สินค้าของฉัน",
+    "orders": "คำสั่งซื้อ",
+    "favorites": "รายการโปรด",
+    "profile": "การตั้งค่าโปรไฟล์",
+    "logout": "ออกจากระบบ"
+  },
+  "products": {
+    "title": "หัวข้อ",
+    "price": "ราคา",
+    "stock": "สต็อก",
+    "addStock": "เพิ่มสต็อก",
+    "outOfStock": "สินค้าหมด",
+    "lowStock": "สต็อกน้อย",
+    "addProduct": "เพิ่มสินค้า",
+    "editProduct": "แก้ไขสินค้า",
+    "deleteProduct": "ลบสินค้า",
+    "viewProduct": "ดูสินค้า"
+  },
+  "orders": {
+    "confirmOrder": "ยืนยันคำสั่งซื้อ",
+    "cancelOrder": "ยกเลิกคำสั่งซื้อ",
+    "pending": "รอดำเนินการ",
+    "confirmed": "ยืนยันแล้ว",
+    "cancelled": "ยกเลิกแล้ว"
+  },
+  "common": {
+    "save": "บันทึก",
+    "cancel": "ยกเลิก",
+    "delete": "ลบ",
+    "edit": "แก้ไข",
+    "loading": "กำลังโหลด...",
+    "noData": "ไม่มีข้อมูล",
+    "search": "ค้นหา",
+    "filter": "กรอง",
+    "sort": "เรียงลำดับ",
+    "viewAll": "ดูทั้งหมด",
+    "addToCart": "เพิ่มลงตะกร้า",
+    "buyNow": "ซื้อเลย",
+    "quantity": "จำนวน",
+    "total": "รวม",
+    "subtotal": "รวมย่อย",
+    "checkout": "ชำระเงิน",
+    "backToHome": "กลับหน้าหลัก",
+    "continueShopping": "ช้อปปิ้งต่อ"
+  },
+  "home": {
+    "title": "ตลาดออนไลน์ครบวงจร",
+    "subtitle": "จุดหมายปลายทางเดียวสำหรับทุกสิ่ง",
+    "marketplace": "ตลาดกลาง",
+    "marketplaceDesc": "ซื้อและขายสินค้า",
+    "secondhand": "ของมือสอง",
+    "secondhandDesc": "สมบัติมือสองคุณภาพดี",
+    "jobs": "งาน",
+    "jobsDesc": "หางานในฝันของคุณ",
+    "travel": "ท่องเที่ยว",
+    "travelDesc": "สำรวจโลก",
+    "featuredProducts": "สินค้าแนะนำ",
+    "exploreCategories": "สำรวจหมวดหมู่"
+  },
+  "marketplace": {
+    "title": "ตลาดกลาง",
+    "subtitle": "ค้นพบสินค้าที่น่าทึ่งจากผู้ขายที่เชื่อถือได้",
+    "allCategories": "หมวดหมู่ทั้งหมด",
+    "priceRange": "ช่วงราคา",
+    "sortBy": "เรียงตาม",
+    "newest": "ใหม่ล่าสุด",
+    "priceAsc": "ราคา: ต่ำไปสูง",
+    "priceDesc": "ราคา: สูงไปต่ำ",
+    "rating": "คะแนน"
+  },
+  "secondhand": {
+    "title": "ตลาดของมือสอง",
+    "subtitle": "หาข้อเสนอดีๆ ในสินค้ามือสอง",
+    "condition": "สภาพ",
+    "excellent": "ดีเยี่ยม",
+    "good": "ดี",
+    "fair": "พอใช้",
+    "preOwned": "ของมือสอง"
+  },
+  "jobs": {
+    "title": "โอกาสในการทำงาน",
+    "subtitle": "หาโอกาสในอาชีพครั้งต่อไปของคุณ",
+    "jobType": "ประเภทงาน",
+    "fullTime": "เต็มเวลา",
+    "partTime": "พาร์ทไทม์",
+    "contract": "สัญญาจ้าง",
+    "remote": "ทำงานจากที่ไหนก็ได้",
+    "location": "สถานที่",
+    "salary": "เงินเดือน",
+    "applyNow": "สมัครเลย",
+    "company": "บริษัท"
+  },
+  "travel": {
+    "title": "ท่องเที่ยวและผจญภัย",
+    "subtitle": "ทริปคัดสรร เที่ยวบิน โรงแรม และการผจญภัยทั่วโลก",
+    "exploreWorld": "สำรวจโลก",
+    "description": "ค้นพบจุดหมายปลายทางที่ไม่เหมือนใครและแพ็คเกจท่องเที่ยวที่น่าจดจำสำหรับคุณ",
+    "readyForJourney": "พร้อมสำหรับการเดินทางครั้งต่อไปแล้วหรือยัง?",
+    "bookExperiences": "จองประสบการณ์ที่น่าจดจำและเริ่มสำรวจโลกวันนี้",
+    "startBooking": "เริ่มจอง",
+    "worldwide": "ทั่วโลก",
+    "allAds": "โฆษณาทั้งหมด",
+    "hotels": "โรงแรม",
+    "restaurants": "ร้านอาหาร",
+    "beaches": "ชายหาด",
+    "tours": "ทัวร์",
+    "services": "บริการ"
+  },
+  "cart": {
+    "title": "ตะกร้าสินค้า",
+    "emptyCart": "ตะกร้าของคุณว่างเปล่า",
+    "emptyCartDesc": "เพิ่มสินค้าเพื่อเริ่มต้น",
+    "removeItem": "ลบสินค้า",
+    "updateQuantity": "อัปเดตจำนวน",
+    "proceedToCheckout": "ดำเนินการชำระเงิน"
+  },
+  "checkout": {
+    "title": "ชำระเงิน",
+    "orderSummary": "สรุปคำสั่งซื้อ",
+    "shippingInfo": "ข้อมูลการจัดส่ง",
+    "paymentMethod": "วิธีการชำระเงิน",
+    "placeOrder": "สั่งซื้อ",
+    "fullName": "ชื่อเต็ม",
+    "address": "ที่อยู่",
+    "city": "เมือง",
+    "phone": "เบอร์โทรศัพท์",
+    "email": "อีเมล"
+  },
+  "orderHistory": {
+    "title": "ประวัติคำสั่งซื้อ",
+    "orderNumber": "หมายเลขคำสั่งซื้อ",
+    "orderDate": "วันที่สั่งซื้อ",
+    "status": "สถานะ",
+    "items": "สินค้า",
+    "reorder": "สั่งซื้อใหม่",
+    "downloadInvoice": "ดาวน์โหลดใบแจ้งหนี้",
+    "noOrders": "ไม่พบคำสั่งซื้อ"
+  },
+  "orderSuccess": {
+    "title": "สั่งซื้อสำเร็จ!",
+    "thankYou": "ขอบคุณสำหรับคำสั่งซื้อของคุณ",
+    "orderConfirmed": "คำสั่งซื้อของคุณได้รับการยืนยันและกำลังดำเนินการ",
+    "orderNumber": "หมายเลขคำสั่งซื้อ",
+    "viewOrders": "ดูคำสั่งซื้อของฉัน"
+  },
+  "postAd": {
+    "title": "โพสต์โฆษณา",
+    "productTitle": "ชื่อสินค้า",
+    "description": "คำอธิบาย",
+    "category": "หมวดหมู่",
+    "uploadImages": "อัปโหลดรูปภาพ",
+    "postAd": "โพสต์โฆษณา",
+    "selectCategory": "เลือกหมวดหมู่"
+  },
+  "productDetail": {
+    "description": "คำอธิบาย",
+    "specifications": "ข้อมูลจำเพาะ",
+    "reviews": "รีวิว",
+    "seller": "ผู้ขาย",
+    "inStock": "มีสินค้า",
+    "addToFavorites": "เพิ่มในรายการโปรด",
+    "removeFromFavorites": "ลบจากรายการโปรด"
+  },
+  "auth": {
+    "login": "เข้าสู่ระบบ",
+    "signup": "สมัครสมาชิก",
+    "email": "อีเมล",
+    "password": "รหัสผ่าน",
+    "confirmPassword": "ยืนยันรหัสผ่าน",
+    "fullName": "ชื่อเต็ม",
+    "dontHaveAccount": "ยังไม่มีบัญชี?",
+    "alreadyHaveAccount": "มีบัญชีแล้ว?",
+    "signInWithGoogle": "เข้าสู่ระบบด้วย Google",
+    "signUpWithGoogle": "สมัครสมาชิกด้วย Google",
+    "forgotPassword": "ลืมรหัสผ่าน?"
+  },
+  "admin": {
+    "title": "แดชบอร์ดผู้ดูแลระบบ",
+    "users": "ผู้ใช้",
+    "allProducts": "สินค้าทั้งหมด",
+    "allOrders": "คำสั่งซื้อทั้งหมด",
+    "statistics": "สถิติ",
+    "manageUsers": "จัดการผู้ใช้",
+    "manageProducts": "จัดการสินค้า",
+    "manageOrders": "จัดการคำสั่งซื้อ"
+  },
+  "seller": {
+    "title": "แดชบอร์ดผู้ขาย",
+    "myOrders": "คำสั่งซื้อของฉัน",
+    "updateStatus": "อัปเดตสถานะ",
+    "orderDetails": "รายละเอียดคำสั่งซื้อ",
+    "customerInfo": "ข้อมูลลูกค้า"
+  }
+}

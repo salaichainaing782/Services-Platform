@@ -13,18 +13,30 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: 'Cart is empty' });
     }
 
+    // Check stock availability and update product quantities
+    for (const cartItem of cart.items) {
+      const product = await Product.findById(cartItem.product._id);
+      if (!product) {
+        return res.status(400).json({ message: `Product ${cartItem.product.title} not found` });
+      }
+      
+      if (product.quantity < cartItem.quantity) {
+        return res.status(400).json({ 
+          message: `Insufficient stock for ${product.title}. Available: ${product.quantity}, Requested: ${cartItem.quantity}` 
+        });
+      }
+      
+      // Update product stock
+      product.quantity -= cartItem.quantity;
+      await product.save();
+    }
+
     // Group cart items by seller
     const itemsBySeller = {};
     
-    console.log('Cart items:', cart.items.length);
-    
     for (const cartItem of cart.items) {
       const product = cartItem.product;
-      console.log('Product:', product.title, 'Seller:', product.seller);
-      
-      // Use product seller or fallback to current user (for testing)
       const sellerId = product.seller ? product.seller.toString() : req.user.id;
-      console.log('Using sellerId:', sellerId);
       
       if (!itemsBySeller[sellerId]) {
         itemsBySeller[sellerId] = [];

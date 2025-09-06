@@ -3,6 +3,7 @@ const API_BASE_URL = 'http://localhost:5000/api';
 // Product types matching backend
 export interface Product {
   id: string;
+  _id?: string;
   title: string;
   price: number;
   originalPrice?: number;
@@ -461,6 +462,35 @@ class ApiClient {
   async cancelOrder(orderId: string): Promise<{ message: string }> {
     const response = await this.request<{ message: string }>(`/orders/${orderId}/cancel`, {
       method: 'PUT',
+    });
+    return response;
+  }
+
+  // Comments API
+  async getComments(productId: string): Promise<any[]> {
+    const response = await this.request<any[]>(`/comments/product/${productId}`);
+    return response;
+  }
+
+  async addComment(productId: string, text: string, parentId?: string): Promise<any> {
+    const response = await this.request<any>('/comments', {
+      method: 'POST',
+      body: JSON.stringify({ productId, text, parentId }),
+    });
+    return response;
+  }
+
+  async likeComment(commentId: string): Promise<{ likes: number; isLiked: boolean }> {
+    const response = await this.request<{ likes: number; isLiked: boolean }>(`/comments/${commentId}/like`, {
+      method: 'POST',
+    });
+    return response;
+  }
+
+  // Product likes API
+  async likeProduct(productId: string): Promise<{ likes: number; isLiked: boolean }> {
+    const response = await this.request<{ likes: number; isLiked: boolean }>(`/likes/product/${productId}`, {
+      method: 'POST',
     });
     return response;
   }
