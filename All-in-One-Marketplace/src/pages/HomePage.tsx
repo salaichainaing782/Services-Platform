@@ -147,7 +147,7 @@ const HomePage = () => {
         { id: 'marketplace', title: t('marketplace.title'), description: t('marketplace.description'), icon: ShoppingBag, color: 'indigo' },
         { id: 'secondhand', title: t('secondhand.title'), description: t('secondhand.description'), icon: Recycle, color: 'green' },
         { id: 'jobs', title: t('jobs.title'), description: t('jobs.description'), icon: Briefcase, color: 'orange' },
-        { id: 'travel', title: t('travel.title'), description: t('travel.description'), icon: Plane, color: 'sky' }
+        { id: 'travel', title: 'Service', description: 'Professional services and consultations', icon: Plane, color: 'sky' }
     ];
 
     const features = [

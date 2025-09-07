@@ -2,12 +2,14 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Header from './components/Header';
 import HomePage from './pages/HomePage';
 import MarketplacePage from './pages/MarketplacePage';
 import SecondhandPage from './pages/SecondhandPage';
 import JobsPage from './pages/JobsPage';
 import TravelPage from './pages/TravelPage';
+import TravelDetailPage from './pages/TravelDetailPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import DashboardPage from './pages/DashboardPage';
@@ -70,8 +72,9 @@ function App() {
   };
 
   return (
-    <CartProvider>
-      <Router>
+    <NotificationProvider>
+      <CartProvider>
+        <Router>
         <div className="min-h-screen bg-background">
           <Header isAuthenticated={isAuthenticated} user={null} />
         <main>
@@ -82,6 +85,7 @@ function App() {
             <Route path="/secondhand" element={<SecondhandPage />} />
             <Route path="/jobs" element={<JobsPage />} />
             <Route path="/travel" element={<TravelPage />} />
+            <Route path="/travel/:id" element={<TravelDetailPage />} />
             <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
             <Route path="/signup" element={<PublicOnlyRoute><SignUpPage /></PublicOnlyRoute>} />
             <Route path="/products/:id" element={<ProductDetailPage />} />
@@ -169,8 +173,9 @@ function App() {
           </div>
         </footer>
         </div>
-      </Router>
-    </CartProvider>
+        </Router>
+      </CartProvider>
+    </NotificationProvider>
   );
 }
 

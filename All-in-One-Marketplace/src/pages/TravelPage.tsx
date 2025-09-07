@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Compass, MessageCircle, Heart, Share, User, Send, ThumbsUp, MapPin, Clock, Star } from 'lucide-react';
+import { Compass, MessageCircle, Heart, Share, User, Send, ThumbsUp, MapPin, Clock, Star, X, LogIn } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/api';
@@ -17,6 +17,8 @@ const TravelPage: React.FC = () => {
   const [showReplyInput, setShowReplyInput] = useState<{ [key: string]: boolean }>({});
   const [comments, setComments] = useState<{ [key: string]: any[] }>({});
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [actionType, setActionType] = useState<'like' | 'comment' | 'reply' | ''>('');
 
   useEffect(() => {
     const load = async () => {
@@ -47,7 +49,8 @@ const TravelPage: React.FC = () => {
 
   const handleLike = async (productId: string) => {
     if (!isAuthenticated) {
-      alert(t('auth.loginRequired'));
+      setActionType('like');
+      setShowLoginModal(true);
       return;
     }
     try {
@@ -82,7 +85,8 @@ const TravelPage: React.FC = () => {
 
   const handleCommentSubmit = async (productId: string) => {
     if (!isAuthenticated) {
-      alert(t('auth.loginRequired'));
+      setActionType('comment');
+      setShowLoginModal(true);
       return;
     }
     if (!commentText.trim()) return;
@@ -106,7 +110,8 @@ const TravelPage: React.FC = () => {
 
   const handleCommentLike = async (commentId: string, productId: string) => {
     if (!isAuthenticated) {
-      alert(t('auth.loginRequired'));
+      setActionType('like');
+      setShowLoginModal(true);
       return;
     }
     try {
@@ -133,7 +138,8 @@ const TravelPage: React.FC = () => {
 
   const handleReplySubmit = async (productId: string, parentId: string) => {
     if (!isAuthenticated) {
-      alert(t('auth.loginRequired'));
+      setActionType('reply');
+      setShowLoginModal(true);
       return;
     }
     if (!replyText[parentId]?.trim()) return;
@@ -182,6 +188,61 @@ const TravelPage: React.FC = () => {
     
     return date.toLocaleDateString();
   };
+
+  const handleLoginRedirect = () => {
+    setShowLoginModal(false);
+    window.location.href = '/login';
+  };
+
+  const LoginModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div 
+        className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in-90 zoom-in-90"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-6 text-white text-center">
+          <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4">
+            <LogIn className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">
+            {t('auth.loginRequired')}
+          </h3>
+          <p className="text-indigo-100">
+            {actionType === 'like' && t('auth.loginToLike')}
+            {actionType === 'comment' && t('auth.loginToComment')}
+            {actionType === 'reply' && t('auth.loginToReply')}
+          </p>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 text-center">
+          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center">
+            <Heart className="w-10 h-10 text-indigo-500" />
+          </div>
+          <p className="text-gray-600 mb-6">
+            {t('auth.joinCommunity')}
+          </p>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              onClick={handleLoginRedirect}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center"
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              {t('auth.login')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 font-sans">
@@ -250,17 +311,22 @@ const TravelPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {items.map((p: any) => (
               <div key={p._id} className="bg-white rounded-xl shadow-md overflow-hidden transition-transform hover:scale-[1.02]">
-                <ProductCard
-                  id={p._id}
-                  title={p.title}
-                  price={p.price}
-                  location={p.location || t('travel.worldwide')}
-                  rating={p.rating}
-                  image={p.image}
-                  category={p.category}
-                  featured={p.featured}
-                  className="!rounded-none !shadow-none !p-0"
-                />
+                <div 
+                  onClick={() => window.location.href = `/travel/${p._id}`}
+                  className="cursor-pointer"
+                >
+                  <ProductCard
+                    id={p._id}
+                    title={p.title}
+                    price={p.price}
+                    location={p.location || t('travel.worldwide')}
+                    rating={p.rating}
+                    image={p.image}
+                    category={p.category}
+                    featured={p.featured}
+                    className="!rounded-none !shadow-none !p-0"
+                  />
+                </div>
                 
                 {/* Product Details */}
                 <div className="p-4 border-b">
@@ -356,7 +422,7 @@ const TravelPage: React.FC = () => {
                                 </div>
                                 
                                 {/* Comment Text with Beautiful Background */}
-                                <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg px-4 py-3 mb-2 shadow-sm border border-indigo-100">
+                                <div className="flex-1 bg-gray-50 rounded-lg p-3">
                                   <p className="text-sm text-gray-800 leading-relaxed">{comment.text}</p>
                                 </div>
                                 
@@ -403,7 +469,7 @@ const TravelPage: React.FC = () => {
                                           </div>
                                           
                                           {/* Reply Text with Beautiful Background */}
-                                          <div className="bg-gradient-to-r from-blue-50 to-sky-50 rounded-lg px-3 py-2 mb-1 shadow-sm border border-blue-100">
+                                          <div className="flex-1 bg-gray-50 rounded-lg p-3">
                                             <p className="text-xs text-gray-700 leading-relaxed">{reply.text}</p>
                                           </div>
                                           
@@ -518,6 +584,9 @@ const TravelPage: React.FC = () => {
           </button>
         </div>
       </footer>
+
+      {/* Login Modal */}
+      {showLoginModal && <LoginModal />}
     </div>
   );
 };

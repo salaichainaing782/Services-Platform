@@ -53,7 +53,8 @@
     "writeReply": "Write a reply...",
     "writeComment": "Write a comment...",
     "noComments": "No comments yet",
-    "loginToComment": "Please login to comment"
+    "loginToComment": "Please login to comment",
+    "loginRequired": "Please login to continue"
   },
   "home": {
     "title": "All-in-One Marketplace",
@@ -157,12 +158,17 @@
   },
   "postAd": {
     "title": "Post an Ad",
+    "subtitle": "Share your item, job opportunity, or professional service",
     "productTitle": "Product Title",
     "description": "Description",
     "category": "Category",
     "uploadImages": "Upload Images",
     "postAd": "Post Ad",
-    "selectCategory": "Select Category"
+    "selectCategory": "Select Category",
+    "service": "Service",
+    "fillRequired": "Please fill all required fields",
+    "success": "Post created successfully!",
+    "error": "Failed to create post. Please try again."
   },
   "productDetail": {
     "description": "Description",

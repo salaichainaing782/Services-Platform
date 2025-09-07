@@ -79,13 +79,41 @@ const productSchema = new mongoose.Schema({
     type: Number,
     min: 0
   },
-  // Travel-specific fields
+  // Travel/Service-specific fields
   tripType: {
     type: String,
-    enum: ['flights', 'hotels', 'packages', 'activities', 'transport']
+    enum: ['consulting', 'design', 'development', 'marketing', 'education', 'travel', 'flights', 'hotels', 'packages', 'activities', 'transport', 'other']
   },
   duration: {
     type: String
+  },
+  groupSize: {
+    type: String
+  },
+  availability: {
+    type: String,
+    enum: ['daily', 'weekends', 'weekdays', 'appointment', 'seasonal']
+  },
+  included: {
+    type: String
+  },
+  toBring: {
+    type: String
+  },
+  hostName: {
+    type: String
+  },
+  hostExperience: {
+    type: String
+  },
+  serviceFee: {
+    type: Number,
+    default: 15
+  },
+  cancellationPolicy: {
+    type: String,
+    enum: ['flexible', 'moderate', 'strict'],
+    default: 'flexible'
   },
   // Social features
   likes: [{
