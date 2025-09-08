@@ -10,6 +10,7 @@ import SecondhandPage from './pages/SecondhandPage';
 import JobsPage from './pages/JobsPage';
 import TravelPage from './pages/TravelPage';
 import TravelDetailPage from './pages/TravelDetailPage';
+import JobDetailPage from './pages/JobDetailPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import DashboardPage from './pages/DashboardPage';
@@ -86,6 +87,7 @@ function App() {
             <Route path="/jobs" element={<JobsPage />} />
             <Route path="/travel" element={<TravelPage />} />
             <Route path="/travel/:id" element={<TravelDetailPage />} />
+            <Route path="/jobs/:id" element={<JobDetailPage />} />
             <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
             <Route path="/signup" element={<PublicOnlyRoute><SignUpPage /></PublicOnlyRoute>} />
             <Route path="/products/:id" element={<ProductDetailPage />} />

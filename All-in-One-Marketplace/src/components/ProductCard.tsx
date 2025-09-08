@@ -18,6 +18,7 @@ interface ProductCardProps {
   className?: string;
   views?: number;
   favorites?: number;
+  linkTo?: string;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -31,7 +32,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   featured = false,
   className,
   views = 0,
-  favorites = 0
+  favorites = 0,
+  linkTo
 }) => {
   const { isAuthenticated, user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
@@ -40,7 +42,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [showLoginModal, setShowLoginModal] = useState(false);
   
   const handleCardClick = () => {
-    window.location.href = `/products/${id}`;
+    if (linkTo) {
+      window.location.href = linkTo;
+    } else {
+      // Default routing based on category
+      switch (category) {
+        case 'jobs':
+          window.location.href = `/jobs/${id}`;
+          break;
+        case 'travel':
+          window.location.href = `/travel/${id}`;
+          break;
+        case 'marketplace':
+        case 'secondhand':
+        default:
+          window.location.href = `/products/${id}`;
+          break;
+      }
+    }
   };
 
   // Check if product is in user's favorites on mount

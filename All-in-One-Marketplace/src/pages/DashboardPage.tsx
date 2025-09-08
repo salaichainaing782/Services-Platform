@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
     User, Heart, Eye, Star, Plus, Edit, Trash2,
     Package, MapPin, Phone, Mail, Shield, LogOut, LayoutDashboard, Settings,
-    Menu, X, AlertTriangle, CheckCircle, XCircle, Info, ShoppingCart, Globe
+    Menu, X, AlertTriangle, CheckCircle, XCircle, Info, ShoppingCart, Globe, Briefcase
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -374,7 +374,10 @@ export const DashboardPage = () => {
     const { user, logout: authLogout, updateProfile } = useAuth();
     const { t, i18n } = useTranslation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('tab') || 'overview';
+    });
     const [userProducts, setUserProducts] = useState<Product[]>([]);
     const [userFavorites, setUserFavorites] = useState<Product[]>([]);
     const [stats, setStats] = useState({
@@ -539,6 +542,8 @@ const Sidebar = () => (
                 { id: 'overview', label: t('dashboard.overview'), icon: LayoutDashboard },
                 { id: 'products', label: t('dashboard.myProducts'), icon: Package },
                 ...(user?.role === 'seller' ? [{ id: 'orders', label: t('dashboard.orders'), icon: ShoppingCart }] : []),
+                { id: 'applications', label: 'Job Applications', icon: Briefcase },
+                ...(user?.role === 'seller' ? [{ id: 'job-applications', label: 'Received Applications', icon: Briefcase }] : []),
                 { id: 'favorites', label: t('dashboard.favorites'), icon: Heart },
                 { id: 'profile', label: t('dashboard.profile'), icon: Settings }
             ].map(tab => (
@@ -672,6 +677,8 @@ const Sidebar = () => (
                                     />
                                 )}
                                 {activeTab === 'orders' && user?.role === 'seller' && <OrdersContent />}
+                                {activeTab === 'applications' && <JobApplicationsContent />}
+                                {activeTab === 'job-applications' && user?.role === 'seller' && <ReceivedApplicationsContent addNotification={addNotification} />}
                                 {activeTab === 'favorites' && <FavoritesContent favorites={userFavorites} onToggleFavorite={handleToggleFavorite} />}
                                 {activeTab === 'profile' && <ProfileContent user={user} onUpdateProfile={updateProfile} addNotification={addNotification} />}
                             </>
@@ -737,6 +744,7 @@ const ProductsContent = ({ products, onDelete, setAlertCount, onEdit }: { produc
     const [isUpdating, setIsUpdating] = useState(false);
     const [stockFilter, setStockFilter] = useState<'all' | 'out-of-stock' | 'low-stock'>('all');
     const [displayCount, setDisplayCount] = useState(12);
+    const [selectedJobForApplications, setSelectedJobForApplications] = useState(null);
     
     const lowStockProducts = products.filter(p => (p.quantity || 0) <= 5 && (p.quantity || 0) > 0);
     const outOfStockProducts = products.filter(p => (p.quantity || 0) === 0);
@@ -833,7 +841,7 @@ const ProductsContent = ({ products, onDelete, setAlertCount, onEdit }: { produc
                         <h3 className="text-red-800 font-semibold mb-2">⚠️ {t('products.outOfStock')} ({outOfStockProducts.length})</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {outOfStockProducts.map(p => (
-                                <div key={p.id} className="text-red-700 text-sm">
+                                <div key={p.id || p._id} className="text-red-700 text-sm">
                                     • {p.title}
                                 </div>
                             ))}
@@ -845,7 +853,7 @@ const ProductsContent = ({ products, onDelete, setAlertCount, onEdit }: { produc
                         <h3 className="text-yellow-800 font-semibold mb-2">⚠️ {t('products.lowStock')} ({lowStockProducts.length})</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {lowStockProducts.map(p => (
-                                <div key={p.id} className="text-yellow-700 text-sm">
+                                <div key={p.id || p._id} className="text-yellow-700 text-sm">
                                     • {p.title} - {p.quantity || 0} left
                                 </div>
                             ))}
@@ -857,7 +865,7 @@ const ProductsContent = ({ products, onDelete, setAlertCount, onEdit }: { produc
         
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
             {displayedProducts.length > 0 ? displayedProducts.map(p => (
-                <div key={p.id} className={`bg-white rounded-xl shadow-md overflow-hidden group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col ${(p.quantity || 0) === 0 ? 'opacity-60' : ''}`}>
+                <div key={p.id || p._id} className={`bg-white rounded-xl shadow-md overflow-hidden group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col ${(p.quantity || 0) === 0 ? 'opacity-60' : ''}`}>
                     <div className="relative">
                         <img src={p.image} alt={p.title} className="h-44 sm:h-48 w-full object-cover"/>
                         {(p.quantity || 0) === 0 && (
@@ -878,6 +886,15 @@ const ProductsContent = ({ products, onDelete, setAlertCount, onEdit }: { produc
                             >
                                 <Eye size={14}/>
                             </button>
+                            {p.category === 'jobs' && (
+                                <button 
+                                    onClick={() => setSelectedJobForApplications(p)}
+                                    className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-600 hover:text-orange-600 hover:bg-white transition-all"
+                                    title="View Applicants"
+                                >
+                                    <User size={14}/>
+                                </button>
+                            )}
                             <button 
                                 onClick={() => onEdit(p)}
                                 className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-gray-600 hover:text-indigo-600 hover:bg-white transition-all"
@@ -990,8 +1007,112 @@ const ProductsContent = ({ products, onDelete, setAlertCount, onEdit }: { produc
                 </div>
             </Modal>
         )}
+        
+        {/* Job Applications Modal */}
+        {selectedJobForApplications && (
+            <JobApplicationsModal 
+                job={selectedJobForApplications}
+                onClose={() => setSelectedJobForApplications(null)}
+            />
+        )}
     </div>
 )};
+
+const JobApplicationsModal = ({ job, onClose }) => {
+    const [applications, setApplications] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadApplications = async () => {
+            try {
+                console.log('Loading applications for job:', job.id || job._id);
+                const response = await apiClient.getJobApplications(job.id || job._id);
+                console.log('Applications response:', response);
+                setApplications(response.applications || []);
+            } catch (error) {
+                console.error('Error loading applications:', error);
+                alert('Failed to load applications: ' + error.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadApplications();
+    }, [job]);
+
+    const getStatusColor = (status) => {
+        const colors = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            reviewed: 'bg-blue-100 text-blue-800',
+            shortlisted: 'bg-green-100 text-green-800',
+            rejected: 'bg-red-100 text-red-800',
+            hired: 'bg-purple-100 text-purple-800'
+        };
+        return colors[status] || 'bg-gray-100 text-gray-800';
+    };
+
+    return (
+        <Modal isOpen={true} onClose={onClose} title={`Applications for "${job.title}"`} size="xl">
+            {loading ? (
+                <div className="text-center py-8">Loading applications...</div>
+            ) : (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {applications.length > 0 ? applications.map(app => (
+                        <div key={app._id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <h4 className="font-semibold text-gray-900">
+                                        {app.applicantId?.firstName} {app.applicantId?.lastName}
+                                    </h4>
+                                    <p className="text-sm text-gray-600">{app.applicantId?.email}</p>
+                                    {app.applicantId?.phone && (
+                                        <p className="text-sm text-gray-600">{app.applicantId?.phone}</p>
+                                    )}
+                                </div>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
+                                    {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                                </span>
+                            </div>
+                            
+                            <div className="bg-gray-50 p-3 rounded mb-3">
+                                <p className="text-sm text-gray-700">{app.coverLetter.substring(0, 200)}...</p>
+                            </div>
+                            
+                            <div className="flex justify-between items-center text-sm text-gray-500">
+                                <span>Applied: {new Date(app.appliedAt).toLocaleDateString()}</span>
+                                <div className="flex space-x-2">
+                                    {app.resume && (
+                                        <a 
+                                            href={app.resume} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-700 font-medium"
+                                        >
+                                            View Resume
+                                        </a>
+                                    )}
+                                    <button 
+                                        onClick={() => {
+                                            onClose();
+                                            window.location.href = '/dashboard?tab=job-applications';
+                                        }}
+                                        className="text-orange-600 hover:text-orange-700 font-medium"
+                                    >
+                                        Manage →
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )) : (
+                        <div className="text-center py-8 text-gray-500">
+                            <User className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                            <p>No applications received yet for this job.</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </Modal>
+    );
+};
 
 const FavoritesContent = ({ favorites, onToggleFavorite }: { favorites: Product[], onToggleFavorite: (id: string) => void }) => (
     <div className="space-y-6">
@@ -1263,6 +1384,996 @@ const OrdersContent = () => {
                     </div>
                 )}
             </div>
+        </div>
+    );
+};
+
+const ReceivedApplicationsContent = ({ addNotification }) => {
+    const [applications, setApplications] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [selectedApplication, setSelectedApplication] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [actionType, setActionType] = useState('');
+    const [employerNotes, setEmployerNotes] = useState('');
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    useEffect(() => {
+        loadApplications();
+    }, []);
+
+    const loadApplications = async () => {
+        try {
+            const response = await apiClient.getEmployerApplications();
+            setApplications(response.applications || []);
+        } catch (error) {
+            console.error('Error loading applications:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleStatusUpdate = async () => {
+        if (!selectedApplication || !actionType) return;
+        
+        setIsUpdating(true);
+        try {
+            await apiClient.updateApplicationStatus(selectedApplication._id, {
+                status: actionType,
+                employerNotes: employerNotes.trim() || undefined
+            });
+            
+            setApplications(prev => prev.map(app => 
+                app._id === selectedApplication._id 
+                    ? { ...app, status: actionType, employerNotes: employerNotes.trim() }
+                    : app
+            ));
+            
+            addNotification(`Application ${actionType} successfully!`);
+            setShowModal(false);
+            setSelectedApplication(null);
+            setEmployerNotes('');
+            setActionType('');
+        } catch (error) {
+            console.error('Error updating application:', error);
+            addNotification('Failed to update application', 'error');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const openActionModal = (application, action) => {
+        setSelectedApplication(application);
+        setActionType(action);
+        setEmployerNotes(application.employerNotes || '');
+        setShowModal(true);
+    };
+
+    const getStatusColor = (status) => {
+        const colors = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            reviewed: 'bg-blue-100 text-blue-800',
+            shortlisted: 'bg-green-100 text-green-800',
+            rejected: 'bg-red-100 text-red-800',
+            hired: 'bg-purple-100 text-purple-800'
+        };
+        return colors[status] || 'bg-gray-100 text-gray-800';
+    };
+
+    if (isLoading) {
+        return <div className="text-center py-8">Loading applications...</div>;
+    }
+
+    return (
+        <>
+            <div className="space-y-6">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Received Job Applications</h1>
+                
+                <div className="space-y-4">
+                    {applications.length > 0 ? applications.map(app => (
+                        <div key={app._id} className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex-1">
+                                    <div className="flex items-center space-x-3 mb-3">
+                                        <h3 className="font-bold text-xl text-gray-900">{app.applicantId?.firstName} {app.applicantId?.lastName}</h3>
+                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(app.status)}`}>
+                                            {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                                        <div className="flex items-center">
+                                            <Briefcase className="w-4 h-4 mr-1" />
+                                            <span>{app.jobId?.title}</span>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <Mail className="w-4 h-4 mr-1" />
+                                            <span>{app.applicantId?.email}</span>
+                                        </div>
+                                        {app.applicantId?.phone && (
+                                            <div className="flex items-center">
+                                                <Phone className="w-4 h-4 mr-1" />
+                                                <span>{app.applicantId?.phone}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 p-4 rounded-lg mb-3">
+                                        <h4 className="font-medium text-gray-900 mb-2">Cover Letter:</h4>
+                                        <p className="text-gray-700 text-sm leading-relaxed">{app.coverLetter}</p>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                        <span>Applied: {new Date(app.appliedAt).toLocaleDateString()}</span>
+                                        {app.expectedSalary && <span>Expected Salary: ${app.expectedSalary}</span>}
+                                        {app.availableStartDate && <span>Available: {new Date(app.availableStartDate).toLocaleDateString()}</span>}
+                                    </div>
+                                </div>
+                                
+                                <div className="ml-6 flex flex-col space-y-2">
+                                    {app.resume && (
+                                        <a 
+                                            href={app.resume} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors text-center"
+                                        >
+                                            View Resume
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {app.employerNotes && (
+                                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                                    <h4 className="font-medium text-blue-900 mb-1">Your Notes:</h4>
+                                    <p className="text-blue-800 text-sm">{app.employerNotes}</p>
+                                </div>
+                            )}
+                            
+                            {app.status === 'pending' && (
+                                <div className="mt-4 flex space-x-3">
+                                    <button 
+                                        onClick={() => openActionModal(app, 'reviewed')}
+                                        className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                        Mark as Reviewed
+                                    </button>
+                                    <button 
+                                        onClick={() => openActionModal(app, 'shortlisted')}
+                                        className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                    >
+                                        Shortlist
+                                    </button>
+                                    <button 
+                                        onClick={() => openActionModal(app, 'rejected')}
+                                        className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                    >
+                                        Reject
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {app.status === 'shortlisted' && (
+                                <div className="mt-4 flex space-x-3">
+                                    <button 
+                                        onClick={() => openActionModal(app, 'hired')}
+                                        className="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                                    >
+                                        Hire Candidate
+                                    </button>
+                                    <button 
+                                        onClick={() => openActionModal(app, 'rejected')}
+                                        className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                    >
+                                        Reject
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )) : (
+                        <div className="text-center py-12">
+                            <Briefcase className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                            <h3 className="text-lg font-semibold text-gray-600 mb-2">No applications received yet</h3>
+                            <p className="text-gray-500">Applications for your job postings will appear here.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+            
+            {/* Action Modal */}
+            {showModal && selectedApplication && (
+                <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={`${actionType.charAt(0).toUpperCase() + actionType.slice(1)} Application`} size="md">
+                    <div className="space-y-4">
+                        <div>
+                            <h4 className="font-medium text-gray-900 mb-2">
+                                {selectedApplication.applicantId?.firstName} {selectedApplication.applicantId?.lastName}
+                            </h4>
+                            <p className="text-gray-600 text-sm">Position: {selectedApplication.jobId?.title}</p>
+                        </div>
+                        
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Notes (Optional)
+                            </label>
+                            <textarea
+                                value={employerNotes}
+                                onChange={(e) => setEmployerNotes(e.target.value)}
+                                placeholder="Add notes for the candidate..."
+                                rows={4}
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                            />
+                        </div>
+                        
+                        <div className="flex space-x-3 pt-4">
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                disabled={isUpdating}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleStatusUpdate}
+                                disabled={isUpdating}
+                                className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 ${
+                                    actionType === 'rejected' ? 'bg-red-600 hover:bg-red-700' :
+                                    actionType === 'hired' ? 'bg-purple-600 hover:bg-purple-700' :
+                                    actionType === 'shortlisted' ? 'bg-green-600 hover:bg-green-700' :
+                                    'bg-blue-600 hover:bg-blue-700'
+                                }`}
+                            >
+                                {isUpdating ? 'Updating...' : `Confirm ${actionType.charAt(0).toUpperCase() + actionType.slice(1)}`}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+        </>
+    );
+};
+
+const JobPostCard = ({ job, onJobUpdate, onJobDelete }) => {
+    const [applications, setApplications] = useState([]);
+    const [applicationCount, setApplicationCount] = useState(0);
+    const [showApplicants, setShowApplicants] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [selectedApplicant, setSelectedApplicant] = useState(null);
+    const [showApplicantModal, setShowApplicantModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    const loadApplications = async () => {
+        if (loading) return;
+        setLoading(true);
+        try {
+            const response = await apiClient.getJobApplications(job.id || job._id);
+            setApplications(response.applications || []);
+            setApplicationCount(response.applications?.length || 0);
+        } catch (error) {
+            console.error('Error loading applications:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadApplications();
+    }, [job]);
+
+    const getStatusColor = (status) => {
+        const colors = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            reviewed: 'bg-blue-100 text-blue-800',
+            shortlisted: 'bg-green-100 text-green-800',
+            rejected: 'bg-red-100 text-red-800',
+            hired: 'bg-purple-100 text-purple-800'
+        };
+        return colors[status] || 'bg-gray-100 text-gray-800';
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                    <h3 className="font-bold text-xl text-gray-900 mb-2">{job.title}</h3>
+                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            <span>{job.location}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <Briefcase className="w-4 h-4 mr-1" />
+                            <span>{job.jobType?.replace('-', ' ')}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <User className="w-4 h-4 mr-1" />
+                            <span className="font-medium text-orange-600">{applicationCount} applicants</span>
+                        </div>
+                    </div>
+                    <p className="text-gray-700 mb-3">{job.description?.substring(0, 150)}...</p>
+                    <div className="text-sm text-gray-500">
+                        Posted: {new Date(job.createdAt).toLocaleDateString()}
+                    </div>
+                </div>
+                <div className="text-right ml-6">
+                    <div className="text-2xl font-bold text-orange-600 mb-2">
+                        ${job.salary || job.price}
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                        <button 
+                            onClick={() => window.open(`/jobs/${job.id || job._id}`, '_blank')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        >
+                            View Job
+                        </button>
+                        {applicationCount > 0 && (
+                            <button 
+                                onClick={() => setShowApplicants(!showApplicants)}
+                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                            >
+                                {showApplicants ? 'Hide' : 'Show'} Applicants
+                            </button>
+                        )}
+                        <div className="flex space-x-1">
+                            <button 
+                                onClick={() => setShowEditModal(true)}
+                                className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs"
+                            >
+                                Edit
+                            </button>
+                            <button 
+                                onClick={() => setShowDeleteModal(true)}
+                                className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {showApplicants && applicationCount > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                    <h4 className="font-semibold text-gray-900 mb-3">Recent Applicants ({applicationCount})</h4>
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {applications.slice(0, 5).map(app => (
+                            <div key={app._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors" onClick={() => { setSelectedApplicant(app); setShowApplicantModal(true); }}>
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                        <User className="w-5 h-5 text-orange-600" />
+                                    </div>
+                                    <div>
+                                        <h5 className="font-medium text-gray-900">
+                                            {app.applicantId?.firstName} {app.applicantId?.lastName}
+                                        </h5>
+                                        <p className="text-sm text-gray-600">{app.applicantId?.email}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
+                                        {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                        {new Date(app.appliedAt).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                        {applicationCount > 5 && (
+                            <div className="text-center">
+                                <button 
+                                    onClick={() => window.location.href = '/dashboard?tab=job-applications'}
+                                    className="text-orange-600 hover:text-orange-700 font-medium text-sm"
+                                >
+                                    View all {applicationCount} applicants →
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            
+            {showApplicantModal && selectedApplicant && (
+                <ApplicantDetailModal 
+                    applicant={selectedApplicant}
+                    job={job}
+                    onClose={() => { setShowApplicantModal(false); setSelectedApplicant(null); }}
+                    onStatusUpdate={(updatedApp) => {
+                        setApplications(prev => prev.map(app => 
+                            app._id === updatedApp._id ? updatedApp : app
+                        ));
+                    }}
+                />
+            )}
+            
+            {showEditModal && (
+                <EditJobModal 
+                    job={job}
+                    onClose={() => setShowEditModal(false)}
+                    onUpdate={(updatedJob) => {
+                        onJobUpdate(updatedJob);
+                        setShowEditModal(false);
+                    }}
+                />
+            )}
+            
+            {showDeleteModal && (
+                <ConfirmModal
+                    isOpen={showDeleteModal}
+                    onClose={() => setShowDeleteModal(false)}
+                    onConfirm={() => {
+                        onJobDelete(job.id || job._id);
+                        setShowDeleteModal(false);
+                    }}
+                    title="Delete Job Post"
+                    message={`Are you sure you want to delete "${job.title}"? This action cannot be undone and will remove all applications.`}
+                    confirmText="Delete"
+                    variant="danger"
+                />
+            )}
+        </div>
+    );
+};
+
+const EditJobModal = ({ job, onClose, onUpdate }) => {
+    const [formData, setFormData] = useState({
+        title: job.title || '',
+        description: job.description || '',
+        salary: job.salary || job.price || '',
+        location: job.location || '',
+        jobType: job.jobType || 'full-time',
+        experience: job.experience || 'entry'
+    });
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsUpdating(true);
+        try {
+            const updatedJob = await apiClient.updateProduct(job.id || job._id, {
+                ...formData,
+                price: parseFloat(formData.salary)
+            });
+            onUpdate(updatedJob);
+        } catch (error) {
+            console.error('Error updating job:', error);
+            alert('Failed to update job post');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={true} onClose={onClose} title="Edit Job Post" size="lg">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+                    <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        required
+                    />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Salary ($)</label>
+                        <input
+                            type="number"
+                            value={formData.salary}
+                            onChange={(e) => setFormData(prev => ({ ...prev, salary: e.target.value }))}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <input
+                            type="text"
+                            value={formData.location}
+                            onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        />
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Job Type</label>
+                        <select
+                            value={formData.jobType}
+                            onChange={(e) => setFormData(prev => ({ ...prev, jobType: e.target.value }))}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        >
+                            <option value="full-time">Full Time</option>
+                            <option value="part-time">Part Time</option>
+                            <option value="contract">Contract</option>
+                            <option value="remote">Remote</option>
+                            <option value="internship">Internship</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Experience Level</label>
+                        <select
+                            value={formData.experience}
+                            onChange={(e) => setFormData(prev => ({ ...prev, experience: e.target.value }))}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        >
+                            <option value="entry">Entry Level</option>
+                            <option value="mid">Mid Level</option>
+                            <option value="senior">Senior Level</option>
+                            <option value="executive">Executive Level</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Job Description</label>
+                    <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        rows={6}
+                        required
+                    />
+                </div>
+                
+                <div className="flex space-x-3 pt-4">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        disabled={isUpdating}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isUpdating}
+                        className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                    >
+                        {isUpdating ? 'Updating...' : 'Update Job'}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+    );
+};
+
+const ApplicantDetailModal = ({ applicant, job, onClose, onStatusUpdate }) => {
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [employerNotes, setEmployerNotes] = useState(applicant.employerNotes || '');
+
+    const handleStatusUpdate = async (newStatus) => {
+        setIsUpdating(true);
+        try {
+            await apiClient.updateApplicationStatus(applicant._id, {
+                status: newStatus,
+                employerNotes: employerNotes.trim() || undefined
+            });
+            onStatusUpdate({ ...applicant, status: newStatus, employerNotes: employerNotes.trim() });
+            onClose();
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert('Failed to update application status');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const getStatusColor = (status) => {
+        const colors = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            reviewed: 'bg-blue-100 text-blue-800',
+            shortlisted: 'bg-green-100 text-green-800',
+            rejected: 'bg-red-100 text-red-800',
+            hired: 'bg-purple-100 text-purple-800'
+        };
+        return colors[status] || 'bg-gray-100 text-gray-800';
+    };
+
+    return (
+        <Modal isOpen={true} onClose={onClose} title="Applicant Details" size="xl">
+            <div className="space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b">
+                    <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                            <User className="w-8 h-8 text-orange-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-bold text-gray-900">
+                                {applicant.applicantId?.firstName} {applicant.applicantId?.lastName}
+                            </h3>
+                            <p className="text-gray-600">Applied for: {job.title}</p>
+                        </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(applicant.status)}`}>
+                        {applicant.status.charAt(0).toUpperCase() + applicant.status.slice(1)}
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
+                            <Mail className="w-4 h-4 mr-2" /> Email
+                        </h4>
+                        <p className="text-gray-700">{applicant.applicantId?.email}</p>
+                    </div>
+                    {applicant.applicantId?.phone && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
+                                <Phone className="w-4 h-4 mr-2" /> Phone
+                            </h4>
+                            <p className="text-gray-700">{applicant.applicantId.phone}</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    {applicant.expectedSalary && (
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                            <h4 className="font-semibold text-blue-900 mb-2">Expected Salary</h4>
+                            <p className="text-blue-800 text-lg font-bold">${applicant.expectedSalary}</p>
+                        </div>
+                    )}
+                    {applicant.availableStartDate && (
+                        <div className="bg-green-50 p-4 rounded-lg">
+                            <h4 className="font-semibold text-green-900 mb-2">Available Start Date</h4>
+                            <p className="text-green-800">{new Date(applicant.availableStartDate).toLocaleDateString()}</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-gray-50 p-6 rounded-lg">
+                    <h4 className="font-semibold text-gray-900 mb-3">Cover Letter</h4>
+                    <div className="bg-white p-4 rounded border max-h-40 overflow-y-auto">
+                        <p className="text-gray-700 leading-relaxed whitespace-pre-line">{applicant.coverLetter}</p>
+                    </div>
+                </div>
+
+                {applicant.resume && (
+                    <div className="bg-indigo-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-indigo-900 mb-2">Resume/CV</h4>
+                        <a 
+                            href={applicant.resume} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Resume
+                        </a>
+                    </div>
+                )}
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Your Notes (Optional)
+                    </label>
+                    <textarea
+                        value={employerNotes}
+                        onChange={(e) => setEmployerNotes(e.target.value)}
+                        placeholder="Add notes about this candidate..."
+                        rows={3}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
+                </div>
+
+                <div className="flex space-x-3 pt-4 border-t">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        disabled={isUpdating}
+                    >
+                        Close
+                    </button>
+                    
+                    {applicant.status === 'pending' && (
+                        <>
+                            <button
+                                onClick={() => handleStatusUpdate('reviewed')}
+                                disabled={isUpdating}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                                Mark Reviewed
+                            </button>
+                            <button
+                                onClick={() => handleStatusUpdate('shortlisted')}
+                                disabled={isUpdating}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                            >
+                                Shortlist
+                            </button>
+                            <button
+                                onClick={() => handleStatusUpdate('rejected')}
+                                disabled={isUpdating}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                            >
+                                Reject
+                            </button>
+                        </>
+                    )}
+                    
+                    {applicant.status === 'shortlisted' && (
+                        <>
+                            <button
+                                onClick={() => handleStatusUpdate('hired')}
+                                disabled={isUpdating}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                            >
+                                Hire Candidate
+                            </button>
+                            <button
+                                onClick={() => handleStatusUpdate('rejected')}
+                                disabled={isUpdating}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                            >
+                                Reject
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const JobApplicationsContent = () => {
+    const { user } = useAuth();
+    const [activeJobTab, setActiveJobTab] = useState('my-applications');
+    const [applications, setApplications] = useState([]);
+    const [myJobPosts, setMyJobPosts] = useState([]);
+    const [receivedApplications, setReceivedApplications] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        loadData();
+    }, [activeJobTab]);
+
+    const loadData = async () => {
+        setIsLoading(true);
+        try {
+            if (activeJobTab === 'my-applications') {
+                const response = await apiClient.getUserJobApplications();
+                setApplications(response.applications || []);
+            } else if (activeJobTab === 'my-job-posts') {
+                const response = await apiClient.getUserProducts({ limit: 100 });
+                const jobPosts = response.products.filter(p => p.category === 'jobs');
+                setMyJobPosts(jobPosts);
+            } else if (activeJobTab === 'received-applications') {
+                const response = await apiClient.getEmployerApplications();
+                setReceivedApplications(response.applications || []);
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const getStatusColor = (status) => {
+        const colors = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            reviewed: 'bg-blue-100 text-blue-800',
+            shortlisted: 'bg-green-100 text-green-800',
+            rejected: 'bg-red-100 text-red-800',
+            hired: 'bg-purple-100 text-purple-800'
+        };
+        return colors[status] || 'bg-gray-100 text-gray-800';
+    };
+
+    if (isLoading) {
+        return <div className="text-center py-8">Loading applications...</div>;
+    }
+
+    const renderMyApplications = () => (
+        <div className="space-y-4">
+            {applications.length > 0 ? applications.map(app => (
+                <div key={app._id} className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                            <h3 className="font-bold text-xl text-gray-900 mb-2">{app.jobId?.title}</h3>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center">
+                                    <MapPin className="w-4 h-4 mr-1" />
+                                    <span>{app.jobId?.location}</span>
+                                </div>
+                                <div className="flex items-center">
+                                    <User className="w-4 h-4 mr-1" />
+                                    <span>{app.jobId?.seller?.firstName} {app.jobId?.seller?.lastName}</span>
+                                </div>
+                            </div>
+                            <p className="text-gray-700 mb-3">{app.coverLetter.substring(0, 150)}...</p>
+                            <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                <span>Applied: {new Date(app.appliedAt).toLocaleDateString()}</span>
+                                {app.expectedSalary && <span>Expected: ${app.expectedSalary}</span>}
+                            </div>
+                        </div>
+                        <div className="text-right ml-6">
+                            <div className="text-2xl font-bold text-orange-600 mb-2">
+                                ${app.jobId?.salary || app.jobId?.price}
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(app.status)}`}>
+                                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                            </span>
+                        </div>
+                    </div>
+                    {app.employerNotes && (
+                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                            <h4 className="font-medium text-blue-900 mb-1">Employer Notes:</h4>
+                            <p className="text-blue-800 text-sm">{app.employerNotes}</p>
+                        </div>
+                    )}
+                </div>
+            )) : (
+                <div className="text-center py-12">
+                    <Briefcase className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No job applications yet</h3>
+                    <p className="text-gray-500 mb-4">Start applying for jobs to see your applications here.</p>
+                    <button 
+                        onClick={() => window.location.href = '/jobs'}
+                        className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors"
+                    >
+                        Browse Jobs
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+
+    const handleJobUpdate = (updatedJob) => {
+        setMyJobPosts(prev => prev.map(job => 
+            (job.id || job._id) === (updatedJob.id || updatedJob._id) ? updatedJob : job
+        ));
+    };
+
+    const handleJobDelete = async (jobId) => {
+        try {
+            await apiClient.deleteProduct(jobId);
+            setMyJobPosts(prev => prev.filter(job => (job.id || job._id) !== jobId));
+        } catch (error) {
+            console.error('Error deleting job:', error);
+            alert('Failed to delete job post');
+        }
+    };
+
+    const renderMyJobPosts = () => (
+        <div className="space-y-4">
+            {myJobPosts.length > 0 ? myJobPosts.map(job => (
+                <JobPostCard 
+                    key={job.id || job._id} 
+                    job={job} 
+                    onJobUpdate={handleJobUpdate}
+                    onJobDelete={handleJobDelete}
+                />
+            )) : (
+                <div className="text-center py-12">
+                    <Package className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No job posts yet</h3>
+                    <p className="text-gray-500 mb-4">Create your first job posting to find candidates.</p>
+                    <button 
+                        onClick={() => window.location.href = '/post'}
+                        className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors"
+                    >
+                        Post a Job
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderReceivedApplications = () => (
+        <div className="space-y-4">
+            {receivedApplications.length > 0 ? receivedApplications.map(app => (
+                <div key={app._id} className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-3">
+                                <h3 className="font-bold text-xl text-gray-900">{app.applicantId?.firstName} {app.applicantId?.lastName}</h3>
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(app.status)}`}>
+                                    {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                                </span>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center">
+                                    <Briefcase className="w-4 h-4 mr-1" />
+                                    <span>{app.jobId?.title}</span>
+                                </div>
+                                <div className="flex items-center">
+                                    <Mail className="w-4 h-4 mr-1" />
+                                    <span>{app.applicantId?.email}</span>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-lg mb-3">
+                                <p className="text-gray-700 text-sm">{app.coverLetter.substring(0, 200)}...</p>
+                            </div>
+                            <div className="text-sm text-gray-500">
+                                Applied: {new Date(app.appliedAt).toLocaleDateString()}
+                            </div>
+                        </div>
+                        <div className="ml-6 flex flex-col space-y-2">
+                            {app.resume && (
+                                <a 
+                                    href={app.resume} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors text-center"
+                                >
+                                    View Resume
+                                </a>
+                            )}
+                            <button 
+                                onClick={() => window.location.href = '/dashboard?tab=job-applications'}
+                                className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors"
+                            >
+                                Manage
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )) : (
+                <div className="text-center py-12">
+                    <Briefcase className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No applications received</h3>
+                    <p className="text-gray-500">Applications for your job postings will appear here.</p>
+                </div>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="space-y-6">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Job Management</h1>
+            
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200">
+                <nav className="flex space-x-8">
+                    <button
+                        onClick={() => setActiveJobTab('my-applications')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                            activeJobTab === 'my-applications'
+                                ? 'border-orange-500 text-orange-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                    >
+                        My Applications
+                    </button>
+                    <button
+                        onClick={() => setActiveJobTab('my-job-posts')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                            activeJobTab === 'my-job-posts'
+                                ? 'border-orange-500 text-orange-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                    >
+                        My Job Posts
+                    </button>
+                    {user?.role === 'seller' && (
+                        <button
+                            onClick={() => setActiveJobTab('received-applications')}
+                            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                activeJobTab === 'received-applications'
+                                    ? 'border-orange-500 text-orange-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            }`}
+                        >
+                            Received Applications
+                        </button>
+                    )}
+                </nav>
+            </div>
+            {/* Tab Content */}
+            {isLoading ? (
+                <div className="text-center py-8">Loading...</div>
+            ) : (
+                <>
+                    {activeJobTab === 'my-applications' && renderMyApplications()}
+                    {activeJobTab === 'my-job-posts' && renderMyJobPosts()}
+                    {activeJobTab === 'received-applications' && renderReceivedApplications()}
+                </>
+            )}
         </div>
     );
 };

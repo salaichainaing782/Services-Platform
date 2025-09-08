@@ -120,6 +120,11 @@ class ApiClient {
       ...(options.headers as Record<string, string>),
     };
 
+    // Don't set Content-Type for FormData
+    if (options.body instanceof FormData) {
+      delete headers['Content-Type'];
+    }
+
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
     }
@@ -491,6 +496,58 @@ class ApiClient {
   async likeProduct(productId: string): Promise<{ likes: number; isLiked: boolean }> {
     const response = await this.request<{ likes: number; isLiked: boolean }>(`/likes/product/${productId}`, {
       method: 'POST',
+    });
+    return response;
+  }
+
+  // Job application API
+  async applyForJob(jobId: string, applicationData: {
+    coverLetter: string;
+    resume?: File;
+    expectedSalary?: string;
+    availableStartDate?: string;
+  }): Promise<{ message: string; applicationId: string }> {
+    const formData = new FormData();
+    formData.append('jobId', jobId);
+    formData.append('coverLetter', applicationData.coverLetter);
+    
+    if (applicationData.resume) {
+      formData.append('resume', applicationData.resume);
+    }
+    if (applicationData.expectedSalary) {
+      formData.append('expectedSalary', applicationData.expectedSalary);
+    }
+    if (applicationData.availableStartDate) {
+      formData.append('availableStartDate', applicationData.availableStartDate);
+    }
+
+    const response = await this.request<{ message: string; applicationId: string }>('/jobs/apply', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Remove Content-Type to let browser set it for FormData
+    });
+    return response;
+  }
+
+  async getUserJobApplications(): Promise<{ applications: any[] }> {
+    const response = await this.request<{ applications: any[] }>('/jobs/applications/user');
+    return response;
+  }
+
+  async getJobApplications(jobId: string): Promise<{ applications: any[] }> {
+    const response = await this.request<{ applications: any[] }>(`/jobs/${jobId}/applications`);
+    return response;
+  }
+
+  async getEmployerApplications(): Promise<{ applications: any[] }> {
+    const response = await this.request<{ applications: any[] }>('/jobs/applications/employer');
+    return response;
+  }
+
+  async updateApplicationStatus(applicationId: string, data: { status: string; employerNotes?: string }): Promise<{ message: string; application: any }> {
+    const response = await this.request<{ message: string; application: any }>(`/jobs/applications/${applicationId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
     return response;
   }

@@ -53,23 +53,35 @@ const JobsPage: React.FC = () => {
           </motion.div>
 
           {/* Search Input inside header */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="w-full lg:w-1/3"
-          >
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder={t('common.search')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-4 py-3 w-full rounded-full border border-gray-300 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-          </motion.div>
+          <div className="flex flex-col lg:flex-row items-center space-y-3 lg:space-y-0 lg:space-x-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="w-full lg:w-80"
+            >
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={t('common.search')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 pr-4 py-3 w-full rounded-full border border-gray-300 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            </motion.div>
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6, duration: 0.8 }}
+              onClick={() => window.location.href = '/dashboard?tab=applications'}
+              className="flex items-center space-x-2 px-4 py-3 bg-orange-600 text-white font-semibold rounded-full hover:bg-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <Briefcase className="w-5 h-5" />
+              <span>My Applications</span>
+            </motion.button>
+          </div>
         </div>
       </header>
 
@@ -129,6 +141,7 @@ const JobsPage: React.FC = () => {
                   image={p.image}
                   category={p.category}
                   featured={p.featured}
+                  linkTo={`/jobs/${p._id}`}
                 />
               </motion.div>
             ))}

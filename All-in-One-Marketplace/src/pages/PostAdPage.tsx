@@ -260,9 +260,8 @@ const PostAdPage: React.FC = () => {
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Category Selection */}
-              <div className="space-y-4">
-                <Label className="text-gray-700 font-semibold text-lg flex items-center">
-                  <Zap className="w-5 h-5 mr-2 text-blue-500" />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Category *
                 </Label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -270,20 +269,19 @@ const PostAdPage: React.FC = () => {
                     <div
                       key={opt.value}
                       onClick={() => setCategory(opt.value as CategoryKey)}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                      className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground ${
                         category === opt.value
-                          ? 'border-blue-500 bg-blue-50 shadow-md transform scale-105'
-                          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-muted-foreground/25'
                       }`}
                     >
-                      <div className="text-center">
-                        <div className={`w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center ${
-                          category === opt.value ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {opt.icon}
-                        </div>
-                        <span className="font-medium text-sm">{opt.label}</span>
+                      <div className="mb-2">
+                        {opt.icon}
                       </div>
+                      <span className="text-sm font-medium">{opt.label}</span>
+                      {category === opt.value && (
+                        <Check className="absolute top-2 right-2 h-4 w-4" />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -293,9 +291,8 @@ const PostAdPage: React.FC = () => {
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Basic Information</h3>
                 
-                <div className="space-y-4">
-                  <Label htmlFor="title" className="text-gray-700 font-semibold flex items-center">
-                    <Star className="w-4 h-4 mr-2 text-yellow-500" />
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Title *
                   </Label>
                   <Input 
@@ -303,22 +300,20 @@ const PostAdPage: React.FC = () => {
                     value={title} 
                     onChange={(e) => setTitle(e.target.value)} 
                     placeholder="Enter a clear and descriptive title" 
-                    className="py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
                     required 
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <Label htmlFor="description" className="text-gray-700 font-semibold flex items-center">
-                    <Info className="w-4 h-4 mr-2 text-blue-500" />
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Description *
                   </Label>
                   <textarea
                     id="description"
-                    rows={5}
+                    rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="flex w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none"
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                     placeholder="Provide detailed information about your post..."
                     required
                   />
@@ -330,27 +325,25 @@ const PostAdPage: React.FC = () => {
                 <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Pricing & Media</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <Label htmlFor="price" className="text-gray-700 font-semibold flex items-center">
-                      <DollarSign className="w-4 h-4 mr-2 text-green-500" />
+                  <div className="space-y-2">
+                    <Label htmlFor="price" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                       Price *
                     </Label>
                     <div className="relative">
-                      <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input 
                         id="price" 
                         value={price} 
                         onChange={(e) => setPrice(e.target.value)} 
                         placeholder="0.00" 
-                        className="py-4 pl-12 pr-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
+                        className="pl-9"
                         required 
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <Label className="text-gray-700 font-semibold flex items-center">
-                      <Image className="w-4 h-4 mr-2 text-purple-500" />
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                       Product Image *
                     </Label>
                     <ImageUpload 
@@ -366,26 +359,24 @@ const PostAdPage: React.FC = () => {
                 <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Additional Details</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <Label htmlFor="location" className="text-gray-700 font-semibold flex items-center">
-                      <MapPin className="w-4 h-4 mr-2 text-red-500" />
+                  <div className="space-y-2">
+                    <Label htmlFor="location" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                       Location
                     </Label>
                     <div className="relative">
-                      <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input 
                         id="location" 
                         value={location} 
                         onChange={(e) => setLocation(e.target.value)} 
                         placeholder="City, Country" 
-                        className="py-4 pl-12 pr-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
+                        className="pl-9"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <Label htmlFor="quantity" className="text-gray-700 font-semibold flex items-center">
-                      <Briefcase className="w-4 h-4 mr-2 text-blue-500" />
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                       Quantity
                     </Label>
                     <Input 
@@ -394,7 +385,6 @@ const PostAdPage: React.FC = () => {
                       min={1} 
                       value={quantity} 
                       onChange={(e) => setQuantity(parseInt(e.target.value || '1', 10))} 
-                      className="py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
                     />
                   </div>
                 </div>
@@ -411,15 +401,15 @@ const PostAdPage: React.FC = () => {
                     </Label>
                     <select
                       id="condition"
-                      className="w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={condition}
                       onChange={(e) => setCondition(e.target.value)}
                     >
-                      <option value="new">🆕 Brand New</option>
-                      <option value="like-new">✨ Like New</option>
-                      <option value="good">👍 Good</option>
-                      <option value="fair">✅ Fair</option>
-                      <option value="poor">⚠️ Poor</option>
+                      <option value="new">Brand New</option>
+                      <option value="like-new">Like New</option>
+                      <option value="good">Good</option>
+                      <option value="fair">Fair</option>
+                      <option value="poor">Poor</option>
                     </select>
                   </div>
                 </div>
@@ -493,20 +483,29 @@ const PostAdPage: React.FC = () => {
                       <Label htmlFor="tripType" className="text-gray-700 font-semibold">
                         Service Type
                       </Label>
-                      <select 
-                        id="tripType" 
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
-                        value={tripType} 
-                        onChange={(e) => setTripType(e.target.value)}
-                      >
-                        <option value="consulting">💡 Consulting</option>
-                        <option value="design">🎨 Design</option>
-                        <option value="development">💻 Development</option>
-                        <option value="marketing">📈 Marketing</option>
-                        <option value="education">📚 Education</option>
-                        <option value="travel">✈️ Travel & Tours</option>
-                        <option value="other">🔧 Other Services</option>
-                      </select>
+                      <div className="relative group">
+                        <select 
+                          id="tripType" 
+                          className="w-full rounded-2xl border-2 border-gray-200 bg-white px-6 py-5 text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm group-hover:shadow-md appearance-none cursor-pointer" 
+                          value={tripType} 
+                          onChange={(e) => setTripType(e.target.value)}
+                        >
+                          <option value="consulting">💡 Consulting</option>
+                          <option value="design">🎨 Design</option>
+                          <option value="development">💻 Development</option>
+                          <option value="marketing">📈 Marketing</option>
+                          <option value="education">📚 Education</option>
+                          <option value="travel">✈️ Travel & Tours</option>
+                          <option value="other">🔧 Other Services</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-6 pointer-events-none">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </div>
+
                     </div>
                     
                     <div className="space-y-4">
@@ -514,13 +513,16 @@ const PostAdPage: React.FC = () => {
                         <Clock className="w-4 h-4 mr-2 text-blue-500" />
                         Duration
                       </Label>
-                      <Input 
-                        id="duration" 
-                        value={duration} 
-                        onChange={(e) => setDuration(e.target.value)} 
-                        placeholder="e.g. 3 days 2 nights, 2 hours" 
-                        className="py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
-                      />
+                      <div className="relative group">
+                        <Input 
+                          id="duration" 
+                          value={duration} 
+                          onChange={(e) => setDuration(e.target.value)} 
+                          placeholder="e.g. 3 days 2 nights, 2 hours" 
+                          className="w-full py-5 px-6 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 text-lg bg-white shadow-sm transition-all duration-300 group-hover:shadow-md"
+                        />
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </div>
                     </div>
                   </div>
 
@@ -653,19 +655,19 @@ const PostAdPage: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={loading}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-5 px-12 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                  className="w-full"
                   size="lg"
                 >
                   {loading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Creating Post...</span>
-                    </div>
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Creating Post...
+                    </>
                   ) : (
-                    <div className="flex items-center space-x-2">
-                      <Check className="w-5 h-5" />
-                      <span>Publish Listing</span>
-                    </div>
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Publish Listing
+                    </>
                   )}
                 </Button>
               </div>
