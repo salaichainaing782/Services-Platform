@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, Share, MessageCircle, User, Send, ThumbsUp, MapPin, Clock, Star, Calendar, Users, Phone, Mail, Globe, Shield, Award, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Heart, Share, MessageCircle, User, Send, ThumbsUp, MapPin, Clock, Star, Calendar, Users, Phone, Mail, Globe, Shield, Award, CheckCircle, ChevronRight, Image, Video, Bookmark, Flag, Eye, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/api';
@@ -18,7 +18,12 @@ const TravelDetailPage: React.FC = () => {
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
   const [showReplyInput, setShowReplyInput] = useState<{ [key: string]: boolean }>({});
   const [isLiked, setIsLiked] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showImageModal, setShowImageModal] = useState(false);
+  
+  const isService = product?.category === 'services';
+  const isTravel = product?.category === 'travel';
 
   useEffect(() => {
     if (id) {
@@ -33,8 +38,9 @@ const TravelDetailPage: React.FC = () => {
       const productData = await apiClient.getProductById(id!);
       setProduct(productData);
       setIsLiked(productData.isLiked || false);
+      setIsBookmarked(productData.isBookmarked || false);
     } catch (error: any) {
-      setError(error.message || 'Failed to load product');
+      setError(error.message || `Failed to load ${product?.category === 'services' ? 'service' : 'product'}`);
     } finally {
       setLoading(false);
     }
@@ -76,7 +82,20 @@ const TravelDetailPage: React.FC = () => {
       setProduct(prev => ({ ...prev, likesCount: result.likes, isLiked: result.isLiked }));
       setIsLiked(result.isLiked);
     } catch (error) {
-      console.error('Failed to like product:', error);
+      console.error(`Failed to like ${isService ? 'service' : 'product'}:`, error);
+    }
+  };
+
+  const handleBookmark = async () => {
+    if (!isAuthenticated) {
+      alert(t('auth.loginRequired'));
+      return;
+    }
+    try {
+      const result = await apiClient.bookmarkProduct(id!);
+      setIsBookmarked(result.isBookmarked);
+    } catch (error) {
+      console.error('Failed to bookmark:', error);
     }
   };
 
@@ -129,39 +148,76 @@ const TravelDetailPage: React.FC = () => {
     }
   };
 
-  // Mock images for demonstration
-  const productImages = [
+  const productImages = isService ? [
+    product?.image,
+    'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=600&fit=crop'
+  ] : [
     product?.image,
     'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&h=600&fit=crop'
   ];
 
-  const features = [
-    { icon: Shield, text: 'Safety Certified', color: 'text-green-600' },
-    { icon: Award, text: 'Best Rated', color: 'text-yellow-600' },
-    { icon: CheckCircle, text: 'Instant Confirmation', color: 'text-blue-600' },
-    { icon: Users, text: 'Small Group', color: 'text-purple-600' }
+  const getServiceTypeLabel = (serviceType: string) => {
+    const serviceTypes = {
+      consulting: t('postAd.consulting'),
+      design: t('postAd.design'),
+      development: t('postAd.development'),
+      marketing: t('postAd.marketing'),
+      education: t('postAd.education'),
+      travel: t('postAd.travel'),
+      hotel: t('postAd.hotel'),
+      accommodation: t('postAd.accommodation'),
+      bar: t('postAd.bar'),
+      ktv: t('postAd.ktv'),
+      massage: t('postAd.massage'),
+      gym: t('postAd.gym'),
+      tea: t('postAd.tea'),
+      coffee: t('postAd.coffee'),
+      restaurant: t('postAd.restaurant'),
+      other: t('postAd.other')
+    };
+    return serviceTypes[serviceType] || serviceType;
+  };
+
+  const features = isService ? [
+    { icon: Shield, text: 'Verified Provider', color: 'text-green-600', bg: 'bg-green-100' },
+    { icon: Award, text: 'Top Rated', color: 'text-yellow-600', bg: 'bg-yellow-100' },
+    { icon: CheckCircle, text: 'Quick Response', color: 'text-blue-600', bg: 'bg-blue-100' },
+    { icon: Users, text: 'Professional Service', color: 'text-purple-600', bg: 'bg-purple-100' }
+  ] : [
+    { icon: Shield, text: 'Safety Certified', color: 'text-green-600', bg: 'bg-green-100' },
+    { icon: Award, text: 'Best Rated', color: 'text-yellow-600', bg: 'bg-yellow-100' },
+    { icon: CheckCircle, text: 'Instant Confirmation', color: 'text-blue-600', bg: 'bg-blue-100' },
+    { icon: Users, text: 'Small Group', color: 'text-purple-600', bg: 'bg-purple-100' }
   ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      <div className={`min-h-screen ${isService ? 'bg-gradient-to-br from-amber-50 to-orange-50' : 'bg-gradient-to-br from-indigo-50 to-blue-50'} flex items-center justify-center`}>
+        <div className="text-center">
+          <div className={`animate-spin rounded-full h-16 w-16 border-b-2 ${isService ? 'border-amber-600' : 'border-indigo-600'} mx-auto mb-4`}></div>
+          <p className="text-gray-600">Loading {isService ? 'service' : 'travel'} details...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Product not found</h2>
+      <div className={`min-h-screen ${isService ? 'bg-gradient-to-br from-amber-50 to-orange-50' : 'bg-gradient-to-br from-indigo-50 to-blue-50'} flex items-center justify-center p-4`}>
+        <div className="text-center max-w-md">
+          <div className="text-6xl mb-4">😢</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{isService ? 'Service' : 'Experience'} not found</h2>
+          <p className="text-gray-600 mb-6">The {isService ? 'service' : 'experience'} you're looking for doesn't exist or may have been removed.</p>
           <button 
-            onClick={() => navigate('/travel')}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            onClick={() => navigate(isService ? '/services' : '/travel')}
+            className={`${isService ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-6 py-3 rounded-xl transition-colors flex items-center justify-center mx-auto`}
           >
-            Back to Travel
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back to {isService ? 'Services' : 'Travel'}
           </button>
         </div>
       </div>
@@ -169,24 +225,54 @@ const TravelDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-10 border-b">
+    <div className={`min-h-screen ${isService ? 'bg-gradient-to-br from-amber-50 to-orange-50' : 'bg-gradient-to-br from-indigo-50 to-blue-50'}`}>
+
+      {showImageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+          <div className="relative max-w-4xl w-full">
+            <button 
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 z-10 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img 
+              src={productImages[currentImageIndex]} 
+              alt={product.title}
+              className="w-full h-auto max-h-screen object-contain rounded-lg"
+            />
+            <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+              {currentImageIndex + 1} / {productImages.length}
+            </div>
+            <div className="absolute bottom-4 right-4 flex space-x-2">
+              <button className="bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors">
+                <Download className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-30 border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button 
-              onClick={() => navigate('/travel')}
-              className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors bg-white px-4 py-2 rounded-lg border hover:border-indigo-300"
+              onClick={() => navigate(isService ? '/services' : '/travel')}
+              className={`flex items-center ${isService ? 'text-amber-600 hover:text-amber-700' : 'text-indigo-600 hover:text-indigo-700'} transition-colors bg-white px-4 py-2 rounded-xl border ${isService ? 'border-amber-200 hover:border-amber-300' : 'border-indigo-200 hover:border-indigo-300'} shadow-sm`}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Travel
+              Back to {isService ? 'Services' : 'Travel'}
             </button>
             
             <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                <Star className="w-5 h-5 text-yellow-400 fill-current mr-1" />
-                <span className="font-semibold">{product.rating || '4.8'}</span>
-                <span className="text-gray-500 ml-1">({product.reviews || 124})</span>
+              {isService && product.serviceType && (
+                <div className={`${isService ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'} px-3 py-1 rounded-full text-sm font-medium`}>
+                  {getServiceTypeLabel(product.serviceType)}
+                </div>
+              )}
+              <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full">
+                <Eye className="w-4 h-4 text-gray-500 mr-1" />
+                <span className="text-sm text-gray-600">{product.views || 0} views</span>
               </div>
             </div>
           </div>
@@ -195,76 +281,114 @@ const TravelDetailPage: React.FC = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Product Images Carousel */}
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-              <div className="aspect-video bg-gradient-to-br from-blue-100 to-indigo-100 relative">
+              <div className={`aspect-video ${isService ? 'bg-gradient-to-br from-amber-100 to-orange-100' : 'bg-gradient-to-br from-blue-100 to-indigo-100'} relative cursor-pointer`} onClick={() => setShowImageModal(true)}>
                 <img 
                   src={productImages[currentImageIndex]} 
                   alt={product.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                  <div className="opacity-0 hover:opacity-100 transition-opacity duration-300">
+                    <Image className="w-12 h-12 text-white/80" />
+                  </div>
+                </div>
+                <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
                   {currentImageIndex + 1} / {productImages.length}
                 </div>
                 <div className="absolute bottom-4 right-4 flex space-x-2">
                   {productImages.map((_, index) => (
                     <button
                       key={index}
-                      onClick={() => setCurrentImageIndex(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentImageIndex(index);
+                      }}
                       className={`w-3 h-3 rounded-full transition-all ${
                         currentImageIndex === index 
-                          ? 'bg-white' 
-                          : 'bg-white/50 hover:bg-white/80'
+                          ? (isService ? 'bg-amber-500' : 'bg-indigo-500') 
+                          : 'bg-white/60 hover:bg-white/80'
                       }`}
                     />
                   ))}
                 </div>
               </div>
+              
+              <div className="p-4 grid grid-cols-4 gap-2">
+                {productImages.map((img, index) => (
+                  <div 
+                    key={index} 
+                    className={`aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
+                      currentImageIndex === index 
+                        ? (isService ? 'border-amber-500' : 'border-indigo-500') 
+                        : 'border-transparent hover:border-gray-300'
+                    }`}
+                    onClick={() => setCurrentImageIndex(index)}
+                  >
+                    <img 
+                      src={img} 
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Product Info */}
             <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
               <div className="flex items-start justify-between mb-6">
                 <div className="flex-1">
-                  <h1 className="text-4xl font-bold text-gray-900 mb-3">{product.title}</h1>
+                  <div className="flex items-center mb-2">
+                    <h1 className="text-4xl font-bold text-gray-900 mr-3">{product.title}</h1>
+                    <button 
+                      onClick={handleBookmark}
+                      className={`p-2 rounded-full transition-colors ${
+                        isBookmarked 
+                          ? (isService ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600')
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
+                    </button>
+                  </div>
+                  
                   <div className="flex items-center space-x-6 text-gray-600 mb-4">
                     <div className="flex items-center">
-                      <MapPin className="w-5 h-5 mr-2 text-indigo-500" />
+                      <MapPin className={`w-5 h-5 mr-2 ${isService ? 'text-amber-500' : 'text-indigo-500'}`} />
                       <span className="font-medium">{product.location}</span>
                     </div>
                     <div className="flex items-center">
-                      <Clock className="w-5 h-5 mr-2 text-indigo-500" />
+                      <Clock className={`w-5 h-5 mr-2 ${isService ? 'text-amber-500' : 'text-indigo-500'}`} />
                       <span>{formatDate(product.createdAt)}</span>
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-4xl font-bold text-indigo-600">
-                    ${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')}
+                {!isService && (
+                  <div className="text-right">
+                    <div className="text-4xl font-bold text-indigo-600">
+                      ${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')}
+                    </div>
+                    <div className="text-gray-500">per person</div>
                   </div>
-                  <div className="text-gray-500">per person</div>
-                </div>
+                )}
               </div>
 
-              {/* Features Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {features.map((feature, index) => (
-                  <div key={index} className="flex items-center p-3 bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg">
+                  <div key={index} className={`flex items-center p-3 ${feature.bg} rounded-xl`}>
                     <feature.icon className={`w-5 h-5 mr-2 ${feature.color}`} />
                     <span className="text-sm font-medium">{feature.text}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Social Actions */}
               <div className="flex items-center space-x-4 py-6 border-y">
                 <button 
                   onClick={handleLike}
                   className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all ${
                     isLiked 
-                      ? 'bg-red-50 text-red-600 shadow-red-100' 
+                      ? (isService ? 'bg-amber-100 text-amber-600 shadow-amber-100' : 'bg-indigo-100 text-indigo-600 shadow-indigo-100') 
                       : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                   } shadow-sm hover:shadow-md`}
                 >
@@ -281,19 +405,23 @@ const TravelDetailPage: React.FC = () => {
                   <Share className="w-6 h-6" />
                   <span className="font-semibold">Share</span>
                 </button>
+                
+                <button className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 shadow-sm hover:shadow-md transition-all">
+                  <Flag className="w-6 h-6" />
+                  <span className="font-semibold">Report</span>
+                </button>
               </div>
 
-              {/* Description */}
               <div className="mt-8">
-                <h3 className="text-2xl font-semibold mb-4 text-gray-900">Experience Details</h3>
+                <h3 className="text-2xl font-semibold mb-4 text-gray-900">{isService ? 'Service Details' : 'Experience Details'}</h3>
                 <p className="text-gray-700 leading-relaxed text-lg">
                   {product.description}
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   {product.included && (
-                    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-xl">
-                      <h4 className="font-semibold text-indigo-900 mb-2">What's Included</h4>
+                    <div className={`${isService ? 'bg-gradient-to-br from-amber-50 to-orange-50' : 'bg-gradient-to-br from-indigo-50 to-blue-50'} p-4 rounded-xl`}>
+                      <h4 className={`font-semibold ${isService ? 'text-amber-900' : 'text-indigo-900'} mb-2`}>What's Included</h4>
                       <ul className="space-y-2 text-gray-700">
                         {product.included.split(',').map((item, index) => (
                           <li key={index} className="flex items-center">
@@ -306,12 +434,12 @@ const TravelDetailPage: React.FC = () => {
                   )}
                   
                   {product.toBring && (
-                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-xl">
-                      <h4 className="font-semibold text-orange-900 mb-2">What to Bring</h4>
+                    <div className={`${isService ? 'bg-gradient-to-br from-blue-50 to-cyan-50' : 'bg-gradient-to-br from-orange-50 to-amber-50'} p-4 rounded-xl`}>
+                      <h4 className={`font-semibold ${isService ? 'text-blue-900' : 'text-orange-900'} mb-2`}>{isService ? 'Requirements' : 'What to Bring'}</h4>
                       <ul className="space-y-2 text-gray-700">
                         {product.toBring.split(',').map((item, index) => (
                           <li key={index} className="flex items-center">
-                            <CheckCircle className="w-4 h-4 text-orange-500 mr-2" />
+                            <CheckCircle className={`w-4 h-4 ${isService ? 'text-blue-500' : 'text-orange-500'} mr-2`} />
                             {item.trim()}
                           </li>
                         ))}
@@ -322,21 +450,20 @@ const TravelDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Comments Section */}
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <h3 className="text-2xl font-semibold mb-6 flex items-center text-gray-900">
-                <MessageCircle className="w-6 h-6 mr-2 text-indigo-500" />
-                Traveler Reviews ({comments.length})
+                <MessageCircle className={`w-6 h-6 mr-2 ${isService ? 'text-amber-500' : 'text-indigo-500'}`} />
+                {isService ? 'Customer Reviews' : 'Traveler Reviews'} ({comments.length})
               </h3>
 
               {/* Add Comment */}
               {isAuthenticated ? (
                 <div className="flex space-x-4 mb-8">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className={`w-12 h-12 ${isService ? 'bg-gradient-to-br from-amber-100 to-orange-100' : 'bg-gradient-to-br from-indigo-100 to-blue-100'} rounded-full flex items-center justify-center flex-shrink-0`}>
                     {user?.avatar ? (
                       <img src={user.avatar} alt={user.firstName} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
-                      <User className="w-6 h-6 text-indigo-600" />
+                      <User className={`w-6 h-6 ${isService ? 'text-amber-600' : 'text-indigo-600'}`} />
                     )}
                   </div>
                   <div className="flex-1 relative">
@@ -345,7 +472,7 @@ const TravelDetailPage: React.FC = () => {
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
                       placeholder="Share your experience..."
-                      className="w-full border-2 border-gray-200 rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                      className={`w-full border-2 border-gray-200 rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none ${isService ? 'focus:border-amber-500 focus:ring-2 focus:ring-amber-200' : 'focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200'} transition-all`}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && commentText.trim()) {
                           handleCommentSubmit();
@@ -354,7 +481,7 @@ const TravelDetailPage: React.FC = () => {
                     />
                     <button 
                       onClick={handleCommentSubmit}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-indigo-500 text-white p-2 rounded-lg hover:bg-indigo-600 transition-colors"
+                      className={`absolute right-4 top-1/2 transform -translate-y-1/2 ${isService ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'} text-white p-2 rounded-lg transition-colors`}
                       disabled={!commentText.trim()}
                     >
                       <Send className="w-5 h-5" />
@@ -362,7 +489,7 @@ const TravelDetailPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl mb-8 border-2 border-dashed border-gray-200">
+                <div className={`text-center py-6 ${isService ? 'bg-gradient-to-r from-gray-50 to-amber-50' : 'bg-gradient-to-r from-gray-50 to-blue-50'} rounded-xl mb-8 border-2 border-dashed border-gray-200`}>
                   <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-600 text-lg font-medium">Sign in to share your experience</p>
                 </div>
@@ -372,11 +499,11 @@ const TravelDetailPage: React.FC = () => {
               <div className="space-y-6">
                 {comments.map(comment => (
                   <div key={comment._id} className="flex space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className={`w-12 h-12 ${isService ? 'bg-gradient-to-br from-amber-100 to-orange-100' : 'bg-gradient-to-br from-indigo-100 to-blue-100'} rounded-full flex items-center justify-center flex-shrink-0`}>
                       {comment.userId?.avatar ? (
                         <img src={comment.userId.avatar} alt={comment.userId.firstName} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
-                        <User className="w-6 h-6 text-indigo-600" />
+                        <User className={`w-6 h-6 ${isService ? 'text-amber-600' : 'text-indigo-600'}`} />
                       )}
                     </div>
                     <div className="flex-1">
@@ -387,7 +514,7 @@ const TravelDetailPage: React.FC = () => {
                         <span className="text-sm text-gray-500">{formatDate(comment.createdAt)}</span>
                       </div>
                       
-                      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl px-6 py-4 mb-4 shadow-sm">
+                      <div className={`${isService ? 'bg-gradient-to-r from-amber-50 to-orange-50' : 'bg-gradient-to-r from-indigo-50 to-blue-50'} rounded-xl px-6 py-4 mb-4 shadow-sm`}>
                         <p className="text-gray-800 leading-relaxed">{comment.text}</p>
                       </div>
                       
@@ -395,7 +522,7 @@ const TravelDetailPage: React.FC = () => {
                         <button 
                           onClick={() => handleCommentLike(comment._id)}
                           className={`flex items-center space-x-2 transition-colors ${
-                            comment.isLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                            comment.isLiked ? (isService ? 'text-amber-600' : 'text-blue-600') : (isService ? 'text-gray-500 hover:text-amber-600' : 'text-gray-500 hover:text-blue-600')
                           }`}
                         >
                           <ThumbsUp className={`w-5 h-5 ${comment.isLiked ? 'fill-current' : ''}`} />
@@ -409,26 +536,25 @@ const TravelDetailPage: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Replies */}
                       {comment.replies?.length > 0 && (
-                        <div className="ml-8 mt-6 space-y-4 border-l-2 border-indigo-200 pl-6">
+                        <div className={`ml-8 mt-6 space-y-4 border-l-2 ${isService ? 'border-amber-200' : 'border-indigo-200'} pl-6`}>
                           {comment.replies.map((reply: any) => (
                             <div key={reply._id} className="flex space-x-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-sky-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                <User className="w-5 h-5 text-blue-600" />
+                              <div className={`w-10 h-10 ${isService ? 'bg-gradient-to-br from-orange-100 to-amber-100' : 'bg-gradient-to-br from-blue-100 to-sky-100'} rounded-full flex items-center justify-center flex-shrink-0`}>
+                                <User className={`w-5 h-5 ${isService ? 'text-orange-600' : 'text-blue-600'}`} />
                               </div>
                               <div className="flex-1">
                                 <div className="flex justify-between items-start mb-2">
                                   <span className="font-medium text-sm text-gray-900">{reply.userId?.firstName}</span>
                                   <span className="text-xs text-gray-500">{formatDate(reply.createdAt)}</span>
                                 </div>
-                                <div className="bg-gradient-to-r from-blue-50 to-sky-50 rounded-lg px-4 py-3 mb-2">
+                                <div className={`${isService ? 'bg-gradient-to-r from-orange-50 to-amber-50' : 'bg-gradient-to-r from-blue-50 to-sky-50'} rounded-lg px-4 py-3 mb-2`}>
                                   <p className="text-sm text-gray-700">{reply.text}</p>
                                 </div>
                                 <button 
                                   onClick={() => handleCommentLike(reply._id)}
                                   className={`flex items-center space-x-1 text-xs transition-colors ${
-                                    reply.isLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                                    reply.isLiked ? (isService ? 'text-amber-600' : 'text-blue-600') : (isService ? 'text-gray-500 hover:text-amber-600' : 'text-gray-500 hover:text-blue-600')
                                   }`}
                                 >
                                   <ThumbsUp className={`w-4 h-4 ${reply.isLiked ? 'fill-current' : ''}`} />
@@ -440,7 +566,6 @@ const TravelDetailPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Reply Input */}
                       {showReplyInput[comment._id] && (
                         <div className="ml-8 mt-4 flex space-x-3">
                           <input
@@ -448,11 +573,11 @@ const TravelDetailPage: React.FC = () => {
                             value={replyText[comment._id] || ''}
                             onChange={(e) => setReplyText(prev => ({ ...prev, [comment._id]: e.target.value }))}
                             placeholder="Write a reply..."
-                            className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                            className={`flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none ${isService ? 'focus:border-amber-500 focus:ring-2 focus:ring-amber-200' : 'focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200'}`}
                           />
                           <button 
                             onClick={() => handleReplySubmit(comment._id)}
-                            className="bg-indigo-500 text-white px-4 py-3 rounded-xl text-sm hover:bg-indigo-600 transition-colors flex items-center"
+                            className={`${isService ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'} text-white px-4 py-3 rounded-xl text-sm transition-colors flex items-center`}
                             disabled={!replyText[comment._id]?.trim()}
                           >
                             <Send className="w-4 h-4" />
@@ -465,16 +590,14 @@ const TravelDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-xl p-6 sticky top-24">
-              <h3 className="text-xl font-bold mb-6 text-gray-900">Book Your Adventure</h3>
+              <h3 className="text-xl font-bold mb-6 text-gray-900">{isService ? 'Service Information' : 'Book Your Adventure'}</h3>
               
               <div className="space-y-5 mb-6">
                 {product.duration && (
-                  <div className="flex items-center space-x-4 p-4 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl">
-                    <Calendar className="w-6 h-6 text-indigo-600" />
+                  <div className={`flex items-center space-x-4 p-4 ${isService ? 'bg-gradient-to-br from-amber-50 to-orange-50' : 'bg-gradient-to-br from-indigo-50 to-blue-50'} rounded-xl`}>
+                    <Calendar className={`w-6 h-6 ${isService ? 'text-amber-600' : 'text-indigo-600'}`} />
                     <div>
                       <div className="font-semibold">Duration</div>
                       <div className="text-gray-600">{product.duration}</div>
@@ -486,7 +609,7 @@ const TravelDetailPage: React.FC = () => {
                   <div className="flex items-center space-x-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl">
                     <Users className="w-6 h-6 text-green-600" />
                     <div>
-                      <div className="font-semibold">Group Size</div>
+                      <div className="font-semibold">{isService ? 'Capacity' : 'Group Size'}</div>
                       <div className="text-gray-600">{product.groupSize}</div>
                     </div>
                   </div>
@@ -498,7 +621,7 @@ const TravelDetailPage: React.FC = () => {
                     <div>
                       <div className="font-semibold">Availability</div>
                       <div className="text-gray-600">
-                        {product.availability === 'daily' && 'Daily tours available'}
+                        {product.availability === 'daily' && (isService ? 'Available daily' : 'Daily tours available')}
                         {product.availability === 'weekends' && 'Weekends only'}
                         {product.availability === 'weekdays' && 'Weekdays only'}
                         {product.availability === 'appointment' && 'By appointment'}
@@ -509,20 +632,19 @@ const TravelDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Host Information */}
               <div className="border-t pt-6">
-                <h4 className="font-semibold mb-4 text-gray-900">Hosted by</h4>
+                <h4 className="font-semibold mb-4 text-gray-900">{isService ? 'Service Provider' : 'Hosted by'}</h4>
                 <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-full flex items-center justify-center">
+                  <div className={`w-14 h-14 ${isService ? 'bg-gradient-to-br from-amber-100 to-orange-100' : 'bg-gradient-to-br from-indigo-100 to-blue-100'} rounded-full flex items-center justify-center`}>
                     {product.seller?.avatar ? (
                       <img src={product.seller.avatar} alt={product.hostName || product.seller.firstName} className="w-12 h-12 rounded-full object-cover" />
                     ) : (
-                      <User className="w-8 h-8 text-indigo-600" />
+                      <User className={`w-8 h-8 ${isService ? 'text-amber-600' : 'text-indigo-600'}`} />
                     )}
                   </div>
                   <div>
                     <div className="font-bold">{product.hostName || `${product.seller?.firstName} ${product.seller?.lastName}`}</div>
-                    <div className="text-sm text-gray-600">{product.hostExperience || 'Service Provider'}</div>
+                    <div className="text-sm text-gray-600">{product.hostExperience || (isService ? 'Professional Service Provider' : 'Service Provider')}</div>
                     <div className="flex items-center space-x-3 mt-2">
                       <div className="flex items-center">
                         <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
@@ -532,7 +654,6 @@ const TravelDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Contact Buttons */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   <button className="flex items-center justify-center space-x-2 p-3 bg-gradient-to-br from-green-50 to-emerald-50 text-green-700 rounded-xl hover:from-green-100 hover:to-emerald-100 transition-all">
                     <Phone className="w-4 h-4" />
@@ -544,36 +665,55 @@ const TravelDetailPage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Price Summary */}
-                <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-600">${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')} x 1 person</span>
-                    <span className="font-semibold">${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-600">Service fee</span>
-                    <span className="font-semibold">${product.serviceFee || 15}</span>
-                  </div>
-                  <div className="border-t pt-2 mt-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-lg">Total</span>
-                      <span className="font-bold text-lg text-indigo-600">
-                        ${(typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')) + (product.serviceFee || 15)}
-                      </span>
+                {!isService && (
+                  <>
+                    <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 mb-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-600">${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')} x 1 person</span>
+                        <span className="font-semibold">${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')}</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-600">Service fee</span>
+                        <span className="font-semibold">${product.serviceFee || 15}</span>
+                      </div>
+                      <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-lg">Total</span>
+                          <span className="font-bold text-lg text-indigo-600">
+                            ${(typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')) + (product.serviceFee || 15)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Book Button */}
-                <button className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                  Book Now - ${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')}
-                </button>
+                    <button className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                      Book Now - ${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')}
+                    </button>
+                  </>
+                )}
+
+                {isService && (
+                  <button className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-4 rounded-xl font-bold text-lg hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    Contact Provider
+                  </button>
+                )}
 
                 <p className="text-center text-sm text-gray-500 mt-4">
-                  {product.cancellationPolicy === 'flexible' && 'Free cancellation up to 24 hours before'}
-                  {product.cancellationPolicy === 'moderate' && 'Free cancellation up to 48 hours before'}
-                  {product.cancellationPolicy === 'strict' && 'No free cancellation'}
-                  {!product.cancellationPolicy && 'Free cancellation up to 24 hours before'}
+                  {isService ? (
+                    <>
+                      {product.cancellationPolicy === 'flexible' && 'Flexible cancellation policy'}
+                      {product.cancellationPolicy === 'moderate' && 'Moderate cancellation policy'}
+                      {product.cancellationPolicy === 'strict' && 'Strict cancellation policy'}
+                      {!product.cancellationPolicy && 'Contact for cancellation policy'}
+                    </>
+                  ) : (
+                    <>
+                      {product.cancellationPolicy === 'flexible' && 'Free cancellation up to 24 hours before'}
+                      {product.cancellationPolicy === 'moderate' && 'Free cancellation up to 48 hours before'}
+                      {product.cancellationPolicy === 'strict' && 'No free cancellation'}
+                      {!product.cancellationPolicy && 'Free cancellation up to 24 hours before'}
+                    </>
+                  )}
                 </p>
               </div>
             </div>

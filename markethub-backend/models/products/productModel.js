@@ -14,13 +14,15 @@ const productSchema = new mongoose.Schema({
   },
   price: {
     type: Number,
-    required: true,
+    required: function() {
+      return this.category !== 'jobs' && this.category !== 'services';
+    },
     min: 0
   },
   category: {
     type: String,
     required: true,
-    enum: ['marketplace', 'secondhand', 'jobs', 'travel']
+    enum: ['marketplace', 'secondhand', 'jobs', 'services', 'travel']
   },
   image: {
     type: String,
@@ -79,10 +81,15 @@ const productSchema = new mongoose.Schema({
     type: Number,
     min: 0
   },
-  // Travel/Service-specific fields
+  // Service-specific fields
+  serviceType: {
+    type: String,
+    enum: ['consulting', 'design', 'development', 'marketing', 'education', 'travel', 'hotel', 'accommodation', 'bar', 'ktv', 'massage', 'gym', 'tea', 'coffee', 'restaurant', 'other']
+  },
+  // Travel-specific fields
   tripType: {
     type: String,
-    enum: ['consulting', 'design', 'development', 'marketing', 'education', 'travel', 'flights', 'hotels', 'packages', 'activities', 'transport', 'other']
+    enum: ['flights', 'hotels', 'packages', 'activities', 'transport', 'other']
   },
   duration: {
     type: String

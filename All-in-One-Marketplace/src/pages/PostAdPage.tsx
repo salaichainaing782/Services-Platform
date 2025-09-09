@@ -1,144 +1,25 @@
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Label } from '../components/ui/Label';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/api';
-import { Check, X, Info, AlertTriangle, XCircle, Upload, Image, MapPin, DollarSign, Calendar, Briefcase, Award, Clock, Star, Zap, Users } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { Check, Briefcase, Award, Star, Zap, ChevronDown, DollarSign, MapPin, Image as ImageIcon, Tag, FileText, Calendar, Clock, Users, User, Shield, CheckIcon } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
 import { useNotificationHelpers } from '../contexts/NotificationContext';
+import { useTranslation } from 'react-i18next';
 
-// Notification Component
-const Notification = ({ 
-  message, 
-  type = 'success', 
-  onClose, 
-  duration = 5000 
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  
-  React.useEffect(() => {
-    setIsVisible(true);
-    
-    const timer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(onClose, 300);
-    }, duration);
-    
-    return () => clearTimeout(timer);
-  }, [duration, onClose]);
-  
-  const typeStyles = {
-    success: {
-      bg: 'bg-green-50 border-green-200',
-      text: 'text-green-800',
-      icon: <Check className="w-5 h-5 text-green-500" />,
-      border: 'border-l-4 border-green-500'
-    },
-    error: {
-      bg: 'bg-red-50 border-red-200',
-      text: 'text-red-800',
-      icon: <XCircle className="w-5 h-5 text-red-500" />,
-      border: 'border-l-4 border-red-500'
-    },
-    info: {
-      bg: 'bg-blue-50 border-blue-200',
-      text: 'text-blue-800',
-      icon: <Info className="w-5 h-5 text-blue-500" />,
-      border: 'border-l-4 border-blue-500'
-    },
-    warning: {
-      bg: 'bg-amber-50 border-amber-200',
-      text: 'text-amber-800',
-      icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-      border: 'border-l-4 border-amber-500'
-    }
-  };
-  
-  const currentStyle = typeStyles[type];
-  
-  return (
-    <div className={`fixed top-4 right-4 z-50 transition-all duration-300 transform ${
-      isVisible 
-        ? 'translate-x-0 opacity-100 scale-100' 
-        : 'translate-x-full opacity-0 scale-95'
-    }`}>
-      <div className={`${currentStyle.bg} ${currentStyle.border} rounded-lg shadow-lg p-4 min-w-80 max-w-sm border`}>
-        <div className="flex items-start">
-          <div className="flex-shrink-0">
-            {currentStyle.icon}
-          </div>
-          <div className="ml-3 flex-1">
-            <p className={`text-sm font-medium ${currentStyle.text}`}>
-              {message}
-            </p>
-          </div>
-          <div className="ml-4 flex-shrink-0">
-            <button
-              onClick={() => {
-                setIsVisible(false);
-                setTimeout(onClose, 300);
-              }}
-              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
-          <div 
-            className={`h-1 rounded-full transition-all duration-300 ${
-              type === 'success' ? 'bg-green-500' :
-              type === 'error' ? 'bg-red-500' :
-              type === 'info' ? 'bg-blue-500' : 'bg-amber-500'
-            }`}
-            style={{ 
-              width: isVisible ? '0%' : '100%',
-              transition: `width ${duration}ms linear`
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Notification Container
-const NotificationContainer = ({ notifications, removeNotification }) => {
-  return (
-    <>
-      {notifications.map(notification => (
-        <Notification
-          key={notification.id}
-          message={notification.message}
-          type={notification.type}
-          onClose={() => removeNotification(notification.id)}
-          duration={notification.duration}
-        />
-      ))}
-    </>
-  );
-};
-
-type CategoryKey = 'marketplace' | 'secondhand' | 'jobs' | 'travel';
+type CategoryKey = 'marketplace' | 'secondhand' | 'jobs' | 'services';
 
 const PostAdPage: React.FC = () => {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
-  const [loading, setLoading] = useState(false);
-  
-  const categoryOptions = [
-    { value: 'marketplace', label: t('marketplace.title'), icon: <Zap className="w-4 h-4" /> },
-    { value: 'secondhand', label: t('secondhand.title'), icon: <Award className="w-4 h-4" /> },
-    { value: 'jobs', label: t('jobs.title'), icon: <Briefcase className="w-4 h-4" /> },
-    { value: 'travel', label: 'Services', icon: <Star className="w-4 h-4" /> },
-  ];
-  
   const { success, error, warning } = useNotificationHelpers();
+  const [loading, setLoading] = useState(false);
+  const [activeStep, setActiveStep] = useState(1);
 
+  // Form State
   const [category, setCategory] = useState<CategoryKey>('marketplace');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -146,11 +27,13 @@ const PostAdPage: React.FC = () => {
   const [image, setImage] = useState('');
   const [location, setLocation] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
+
+  // Category-specific State
   const [condition, setCondition] = useState('good');
   const [jobType, setJobType] = useState('full-time');
   const [experience, setExperience] = useState('entry');
   const [salary, setSalary] = useState('');
-  const [tripType, setTripType] = useState('consulting');
+  const [serviceType, setServiceType] = useState('consulting');
   const [duration, setDuration] = useState('');
   const [groupSize, setGroupSize] = useState('');
   const [availability, setAvailability] = useState('daily');
@@ -163,514 +46,899 @@ const PostAdPage: React.FC = () => {
 
   const showCondition = useMemo(() => category === 'secondhand', [category]);
   const showJobFields = useMemo(() => category === 'jobs', [category]);
-  const showServiceFields = useMemo(() => category === 'travel', [category]);
+  const showServiceFields = useMemo(() => category === 'services', [category]);
+
+  const categoryOptions = [
+    { value: 'marketplace', label: t('postAd.marketplace'), icon: <Zap className="w-5 h-5" />, color: 'blue' },
+    { value: 'secondhand', label: t('postAd.secondhand'), icon: <Award className="w-5 h-5" />, color: 'green' },
+    { value: 'jobs', label: t('postAd.jobs'), icon: <Briefcase className="w-5 h-5" />, color: 'purple' },
+    { value: 'services', label: t('postAd.services'), icon: <Star className="w-5 h-5" />, color: 'amber' },
+  ];
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setPrice('');
+    setImage('');
+    setLocation('');
+    setQuantity(1);
+    setCondition('good');
+    setJobType('full-time');
+    setExperience('entry');
+    setSalary('');
+    setServiceType('consulting');
+    setDuration('');
+    setGroupSize('');
+    setAvailability('daily');
+    setIncluded('');
+    setToBring('');
+    setHostName('');
+    setHostExperience('');
+    setCancellationPolicy('flexible');
+    setServiceFee('15');
+    setActiveStep(1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isAuthenticated) {
-      error('Authentication Required', 'Please login to post an ad');
+      error(t('postAd.authRequired'), t('postAd.loginToPost'));
       return;
     }
 
-    if (!title || !description || !price || !image || !category) {
-      warning('Missing Fields', 'Please fill all required fields');
+    if (!title || !description || (category !== 'jobs' && category !== 'services' && !price) || !image || !category) {
+      warning(t('postAd.missingFields'), t('postAd.fillAllRequired'));
       return;
     }
 
-    const basePayload: any = {
+    const payload: any = {
       title,
       description,
-      price,
       image,
       category,
       location,
       quantity,
     };
 
-    if (showCondition) {
-      basePayload.condition = condition;
+    if (category !== 'jobs' && category !== 'services') {
+      payload.price = price;
     }
+
+    if (showCondition) payload.condition = condition;
     if (showJobFields) {
-      basePayload.jobType = jobType;
-      basePayload.experience = experience;
-      basePayload.salary = salary;
+      payload.jobType = jobType;
+      payload.experience = experience;
+      payload.salary = salary;
     }
     if (showServiceFields) {
-      basePayload.tripType = tripType;
-      basePayload.duration = duration;
-      basePayload.groupSize = groupSize;
-      basePayload.availability = availability;
-      basePayload.included = included;
-      basePayload.toBring = toBring;
-      basePayload.hostName = hostName;
-      basePayload.hostExperience = hostExperience;
-      basePayload.cancellationPolicy = cancellationPolicy;
-      basePayload.serviceFee = serviceFee;
+      payload.serviceType = serviceType;
+      payload.duration = duration;
+      payload.groupSize = groupSize;
+      payload.availability = availability;
+      payload.included = included;
+      payload.toBring = toBring;
+      payload.hostName = hostName;
+      payload.hostExperience = hostExperience;
+      payload.cancellationPolicy = cancellationPolicy;
     }
 
     try {
       setLoading(true);
-      const created = await apiClient.createProduct(basePayload);
-      success('Post Created', 'Your listing has been published successfully!');
-      
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setPrice('');
-      setImage('');
-      setLocation('');
-      setSalary('');
-      setDuration('');
-      setGroupSize('');
-      setIncluded('');
-      setToBring('');
-      setHostName('');
-      setHostExperience('');
-      setQuantity(1);
-      
+      await apiClient.createProduct(payload);
+      success(t('postAd.postCreated'), t('postAd.publishedSuccessfully'));
+      resetForm();
     } catch (err: any) {
       console.error('Failed to create post:', err);
-      error('Post Creation Failed', err?.message || 'Failed to create post. Please try again.');
+      error(t('postAd.postCreationFailed'), err?.message || t('postAd.unexpectedError'));
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
+  const nextStep = () => {
+    if (activeStep < 3) setActiveStep(activeStep + 1);
+  };
 
-      
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Create Your Listing</h1>
-          <p className="text-gray-600 text-lg">Reach thousands of potential buyers with your amazing offer</p>
-        </div>
+  const prevStep = () => {
+    if (activeStep > 1) setActiveStep(activeStep - 1);
+  };
 
-        <Card className="border-0 shadow-2xl rounded-2xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white py-8">
-            <div className="text-center">
-              <CardTitle className="text-3xl font-bold mb-2">Post Your Ad</CardTitle>
-              <CardDescription className="text-blue-100 text-lg">
-                Choose a category and fill in the details to get started
-              </CardDescription>
+  const renderStep = () => {
+    switch (activeStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Choose Category</h2>
+              <p className="text-gray-500">Select the most relevant category for your listing</p>
             </div>
-          </CardHeader>
-          
-          <CardContent className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Category Selection */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Category *
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {categoryOptions.map((opt) => (
+                <div
+                  key={opt.value}
+                  onClick={() => setCategory(opt.value as CategoryKey)}
+                  className={`p-5 rounded-xl border-2 transition-all cursor-pointer flex items-center space-x-4 ${
+                    category === opt.value
+                      ? `border-${opt.color}-500 bg-${opt.color}-50`
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className={`p-3 rounded-lg bg-${opt.color}-100`}>
+                    {React.cloneElement(opt.icon, { className: `w-6 h-6 text-${opt.color}-600` })}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800">{opt.label}</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {opt.value === 'marketplace' && 'New products and items'}
+                      {opt.value === 'secondhand' && 'Used items in good condition'}
+                      {opt.value === 'jobs' && 'Employment opportunities'}
+                      {opt.value === 'services' && 'Offer your skills and expertise'}
+                    </p>
+                  </div>
+                  {category === opt.value && (
+                    <div className="ml-auto bg-blue-500 rounded-full p-1">
+                      <Check className="h-4 w-4 text-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex justify-end pt-4">
+              <Button 
+                onClick={nextStep}
+                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg"
+              >
+                Continue
+                <CheckIcon className="ml-2 h-4 w-4 transform rotate-60" />
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Basic Information</h2>
+              <p className="text-gray-500">Provide essential details about your listing</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <Label htmlFor="title" className="text-gray-700 mb-2 block font-medium">
+                  <Tag className="inline-block w-4 h-4 mr-2" />
+                  {t('postAd.titleLabel')} *
                 </Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {categoryOptions.map((opt) => (
-                    <div
-                      key={opt.value}
-                      onClick={() => setCategory(opt.value as CategoryKey)}
-                      className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground ${
-                        category === opt.value
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-muted-foreground/25'
-                      }`}
-                    >
-                      <div className="mb-2">
-                        {opt.icon}
-                      </div>
-                      <span className="text-sm font-medium">{opt.label}</span>
-                      {category === opt.value && (
-                        <Check className="absolute top-2 right-2 h-4 w-4" />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <Input 
+                  id="title" 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  placeholder={t('postAd.titlePlaceholder')} 
+                  // className="py-3 px-4 rounded-xl border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  required 
+                />
               </div>
-
-              {/* Basic Information */}
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Basic Information</h3>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Title *
+              
+              <div className="md:col-span-2">
+                <Label htmlFor="description" className="text-gray-700 mb-2 block font-medium">
+                  <FileText className="inline-block w-4 h-4 mr-2" />
+                  {t('postAd.descriptionLabel')} *
+                </Label>
+                <textarea 
+                  id="description" 
+                  rows={4} 
+                  value={description} 
+                  onChange={(e) => setDescription(e.target.value)} 
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                  placeholder={t('postAd.descriptionPlaceholder')} 
+                  required 
+                />
+              </div>
+              
+              {category !== 'jobs' && category !== 'services' && (
+                <div>
+                  <Label htmlFor="price" className="text-gray-700 mb-2 block font-medium">
+                    <DollarSign className="inline-block w-4 h-4 mr-2" />
+                    {t('postAd.priceLabel')} *
                   </Label>
-                  <Input 
-                    id="title" 
-                    value={title} 
-                    onChange={(e) => setTitle(e.target.value)} 
-                    placeholder="Enter a clear and descriptive title" 
-                    required 
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Description *
-                  </Label>
-                  <textarea
-                    id="description"
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                    placeholder="Provide detailed information about your post..."
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Pricing & Media */}
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Pricing & Media</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="price" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Price *
-                    </Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input 
-                        id="price" 
-                        value={price} 
-                        onChange={(e) => setPrice(e.target.value)} 
-                        placeholder="0.00" 
-                        className="pl-9"
-                        required 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Product Image *
-                    </Label>
-                    <ImageUpload 
-                      onImageChange={setImage}
-                      currentImage={image}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Location & Quantity */}
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Additional Details</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="location" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Location
-                    </Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input 
-                        id="location" 
-                        value={location} 
-                        onChange={(e) => setLocation(e.target.value)} 
-                        placeholder="City, Country" 
-                        className="pl-9"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Quantity
-                    </Label>
+                  <div className="relative">
                     <Input 
-                      id="quantity" 
+                      id="price" 
                       type="number" 
-                      min={1} 
-                      value={quantity} 
-                      onChange={(e) => setQuantity(parseInt(e.target.value || '1', 10))} 
+                      value={price} 
+                      onChange={(e) => setPrice(e.target.value)} 
+                      placeholder="0.00" 
+                      required 
                     />
-                  </div>
-                </div>
-              </div>
-
-              {/* Condition Section */}
-              {showCondition && (
-                <div className="space-y-6">
-                  <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Item Condition</h3>
-                  
-                  <div className="space-y-4">
-                    <Label htmlFor="condition" className="text-gray-700 font-semibold">
-                      Select Condition
-                    </Label>
-                    <select
-                      id="condition"
-                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={condition}
-                      onChange={(e) => setCondition(e.target.value)}
-                    >
-                      <option value="new">Brand New</option>
-                      <option value="like-new">Like New</option>
-                      <option value="good">Good</option>
-                      <option value="fair">Fair</option>
-                      <option value="poor">Poor</option>
-                    </select>
                   </div>
                 </div>
               )}
+              
+              <div>
+                <Label htmlFor="quantity" className="text-gray-700 mb-2 block font-medium">
+                  {t('postAd.quantityLabel')}
+                </Label>
+                <Input 
+                  id="quantity" 
+                  type="number" 
+                  min={1} 
+                  value={quantity} 
+                  onChange={(e) => setQuantity(parseInt(e.target.value || '1', 10))} 
+                  // className="py-3 rounded-xl border-gray-300 focus:ring-blue-500 focus:border-blue-500" 
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="location" className="text-gray-700 mb-2 block font-medium">
+                  <MapPin className="inline-block w-4 h-4 mr-2" />
+                  {t('postAd.locationLabel')}
+                </Label>
+                <div className="relative">
+                  {/* <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
+                  <Input 
+                    id="location" 
+                    value={location} 
+                    onChange={(e) => setLocation(e.target.value)} 
+                    placeholder={t('postAd.locationPlaceholder')} 
+                    // className="pl-11 py-3 rounded-xl border-gray-300 focus:ring-blue-500 focus:border-blue-500" 
+                  />
+                </div>
+              </div>
+              
+              <div className="md:col-span-2">
+                <Label className="text-gray-700 mb-2 block font-medium">
+                  <ImageIcon className="inline-block w-4 h-4 mr-2" />
+                  {t('postAd.productImageLabel')} *
+                </Label>
+                <ImageUpload onImageChange={setImage} currentImage={image} />
+              </div>
+            </div>
+            
+            <div className="flex justify-between pt-6">
+              <Button 
+                onClick={prevStep}
+                variant="outline" 
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-lg"
+              >
+                Back
+              </Button>
+              <Button 
+                onClick={nextStep}
+                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg"
+              >
+                Continue
+                <CheckIcon className="ml-2 h-4 w-4 transform rotate-60" />
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Additional Details</h2>
+              <p className="text-gray-500">Add specific information based on your category</p>
+            </div>
+            
+            {/* Item Condition */}
+            {showCondition && (
+              <div className="bg-gray-50 p-5 rounded-xl">
+                <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
+                  <Award className="w-5 h-5 mr-2 text-green-500" />
+                  {t('postAd.itemCondition')}
+                </h3>
+                <div>
+                  <Label htmlFor="condition" className="text-gray-700 mb-2 block">
+                    {t('postAd.conditionLabel')}
+                  </Label>
+                  <div className="relative">
+                    <select 
+                      id="condition" 
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
+                      value={condition} 
+                      onChange={(e) => setCondition(e.target.value)}
+                    >
+                      <option value="new"> {t('postAd.new')}</option>
+                      <option value="like-new"> {t('postAd.likeNew')}</option>
+                      <option value="good"> {t('postAd.good')}</option>
+                      <option value="fair"> {t('postAd.fair')}</option>
+                      <option value="poor"> {t('postAd.poor')}</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            )}
 
-              {/* Job Fields */}
-              {showJobFields && (
-                <div className="space-y-6">
-                  <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Job Details</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-4">
-                      <Label htmlFor="jobType" className="text-gray-700 font-semibold">
-                        Job Type
-                      </Label>
+            {/* Job Details */}
+            {showJobFields && (
+              <div className="bg-gray-50 p-5 rounded-xl">
+                <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
+                  <Briefcase className="w-5 h-5 mr-2 text-purple-500" />
+                  {t('postAd.jobDetails')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="jobType" className="text-gray-700 mb-2 block">
+                      {t('postAd.jobTypeLabel')}
+                    </Label>
+                    <div className="relative">
                       <select 
                         id="jobType" 
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
+                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
                         value={jobType} 
                         onChange={(e) => setJobType(e.target.value)}
                       >
-                        <option value="full-time">💼 Full-time</option>
-                        <option value="part-time">⏰ Part-time</option>
-                        <option value="contract">📝 Contract</option>
-                        <option value="remote">🏠 Remote</option>
-                        <option value="internship">🎓 Internship</option>
+                        <option value="full-time"> {t('postAd.fullTime')}</option>
+                        <option value="part-time"> {t('postAd.partTime')}</option>
+                        <option value="contract"> {t('postAd.contract')}</option>
+                        <option value="remote"> {t('postAd.remote')}</option>
+                        <option value="internship"> {t('postAd.internship')}</option>
                       </select>
+                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
-                    
-                    <div className="space-y-4">
-                      <Label htmlFor="experience" className="text-gray-700 font-semibold">
-                        Experience
-                      </Label>
+                  </div>
+                  <div>
+                    <Label htmlFor="experience" className="text-gray-700 mb-2 block">
+                      {t('postAd.experienceLabel')}
+                    </Label>
+                    <div className="relative">
                       <select 
                         id="experience" 
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
+                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
                         value={experience} 
                         onChange={(e) => setExperience(e.target.value)}
                       >
-                        <option value="entry">🚀 Entry Level</option>
-                        <option value="mid">⭐ Mid Level</option>
-                        <option value="senior">👑 Senior Level</option>
-                        <option value="executive">🎯 Executive</option>
+                        <option value="entry"> {t('postAd.entry')}</option>
+                        <option value="mid"> {t('postAd.mid')}</option>
+                        <option value="senior"> {t('postAd.senior')}</option>
+                        <option value="executive"> {t('postAd.executive')}</option>
                       </select>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <Label htmlFor="salary" className="text-gray-700 font-semibold flex items-center">
-                        <DollarSign className="w-4 h-4 mr-2 text-green-500" />
-                        Salary
-                      </Label>
-                      <Input 
-                        id="salary" 
-                        value={salary} 
-                        onChange={(e) => setSalary(e.target.value)} 
-                        placeholder="e.g. $60k - $80k" 
-                        className="py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
-                      />
+                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
                   </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="salary" className="text-gray-700 mb-2 block">
+                      {t('postAd.salaryLabel')}
+                    </Label>
+                    <Input 
+                      id="salary" 
+                      value={salary} 
+                      onChange={(e) => setSalary(e.target.value)} 
+                      placeholder={t('postAd.salaryPlaceholder')} 
+                      // className="py-3 rounded-xl border-gray-300 focus:ring-blue-500 focus:border-blue-500" 
+                    />
+                  </div>
                 </div>
-              )}
-
-              {/* Service Fields */}
-              {showServiceFields && (
-                <div className="space-y-6">
-                  <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Service Details</h3>
+              </div>
+            )}
+            
+            {/* Service Details */}
+            {showServiceFields && (
+              <div className="space-y-5">
+                <div className="bg-gray-50 p-5 rounded-xl">
+                  <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
+                    <Star className="w-5 h-5 mr-2 text-amber-500" />
+                    {t('postAd.serviceDetails')}
+                  </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <Label htmlFor="tripType" className="text-gray-700 font-semibold">
-                        Service Type
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="serviceType" className="text-gray-700 mb-2 block">
+                        {t('postAd.serviceTypeLabel')}
                       </Label>
-                      <div className="relative group">
+                      <div className="relative">
                         <select 
-                          id="tripType" 
-                          className="w-full rounded-2xl border-2 border-gray-200 bg-white px-6 py-5 text-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all shadow-sm group-hover:shadow-md appearance-none cursor-pointer" 
-                          value={tripType} 
-                          onChange={(e) => setTripType(e.target.value)}
+                          id="serviceType" 
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
+                          value={serviceType} 
+                          onChange={(e) => setServiceType(e.target.value)}
                         >
-                          <option value="consulting">💡 Consulting</option>
-                          <option value="design">🎨 Design</option>
-                          <option value="development">💻 Development</option>
-                          <option value="marketing">📈 Marketing</option>
-                          <option value="education">📚 Education</option>
-                          <option value="travel">✈️ Travel & Tours</option>
-                          <option value="other">🔧 Other Services</option>
+                          <option value="consulting"> {t('postAd.consulting')}</option>
+                          <option value="design"> {t('postAd.design')}</option>
+                          <option value="development"> {t('postAd.development')}</option>
+                          <option value="marketing"> {t('postAd.marketing')}</option>
+                          <option value="education"> {t('postAd.education')}</option>
+                          <option value="travel"> {t('postAd.travel')}</option>
+                          <option value="hotel"> {t('postAd.hotel')}</option>
+                          <option value="accommodation"> {t('postAd.accommodation')}</option>
+                          <option value="bar"> {t('postAd.bar')}</option>
+                          <option value="ktv"> {t('postAd.ktv')}</option>
+                          <option value="massage"> {t('postAd.massage')}</option>
+                          <option value="gym"> {t('postAd.gym')}</option>
+                          <option value="tea"> {t('postAd.tea')}</option>
+                          <option value="coffee"> {t('postAd.coffee')}</option>
+                          <option value="restaurant"> {t('postAd.restaurant')}</option>
+                          <option value="other"> {t('postAd.other')}</option>
                         </select>
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-6 pointer-events-none">
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                       </div>
-
                     </div>
-                    
-                    <div className="space-y-4">
-                      <Label htmlFor="duration" className="text-gray-700 font-semibold flex items-center">
-                        <Clock className="w-4 h-4 mr-2 text-blue-500" />
-                        Duration
-                      </Label>
-                      <div className="relative group">
+                  </div>
+                  
+                  {/* Service-specific fields */}
+                  {(serviceType === 'consulting' || serviceType === 'design' || serviceType === 'development' || serviceType === 'marketing' || serviceType === 'education') && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                      <div>
+                        <Label htmlFor="duration" className="text-gray-700 mb-2 block">
+                          <Clock className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.durationLabel')}
+                        </Label>
                         <Input 
                           id="duration" 
                           value={duration} 
                           onChange={(e) => setDuration(e.target.value)} 
-                          placeholder="e.g. 3 days 2 nights, 2 hours" 
-                          className="w-full py-5 px-6 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 text-lg bg-white shadow-sm transition-all duration-300 group-hover:shadow-md"
+                          placeholder={t('postAd.durationPlaceholder')} 
                         />
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </div>
+                      <div>
+                        <Label htmlFor="availability" className="text-gray-700 mb-2 block">
+                          <Calendar className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.availabilityLabel')}
+                        </Label>
+                        <div className="relative">
+                          <select 
+                            id="availability" 
+                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
+                            value={availability} 
+                            onChange={(e) => setAvailability(e.target.value)}
+                          >
+                            <option value="daily"> {t('postAd.daily')}</option>
+                            <option value="weekends"> {t('postAd.weekendsOnly')}</option>
+                            <option value="weekdays"> {t('postAd.weekdaysOnly')}</option>
+                            <option value="appointment"> {t('postAd.byAppointment')}</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <Label htmlFor="groupSize" className="text-gray-700 font-semibold flex items-center">
-                        <Star className="w-4 h-4 mr-2 text-purple-500" />
-                        Group Size
-                      </Label>
-                      <Input 
-                        id="groupSize" 
-                        value={groupSize} 
-                        onChange={(e) => setGroupSize(e.target.value)} 
-                        placeholder="e.g. 2-12 people, 1-on-1" 
-                        className="py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
-                      />
+                  )}
+                  
+                  {serviceType === 'travel' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                      <div>
+                        <Label htmlFor="duration" className="text-gray-700 mb-2 block">
+                          <Clock className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.durationLabel')}
+                        </Label>
+                        <Input 
+                          id="duration" 
+                          value={duration} 
+                          onChange={(e) => setDuration(e.target.value)} 
+                          placeholder={t('postAd.durationPlaceholder')} 
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="groupSize" className="text-gray-700 mb-2 block">
+                          <Users className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.groupSizeLabel')}
+                        </Label>
+                        <Input 
+                          id="groupSize" 
+                          value={groupSize} 
+                          onChange={(e) => setGroupSize(e.target.value)} 
+                          placeholder={t('postAd.groupSizePlaceholder')} 
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="included" className="text-gray-700 mb-2 block">
+                          {t('postAd.whatsIncluded')}
+                        </Label>
+                        <textarea 
+                          id="included" 
+                          rows={2} 
+                          value={included} 
+                          onChange={(e) => setIncluded(e.target.value)} 
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                          placeholder={t('postAd.includedPlaceholder')} 
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="toBring" className="text-gray-700 mb-2 block">
+                          {t('postAd.whatToBring')}
+                        </Label>
+                        <textarea 
+                          id="toBring" 
+                          rows={2} 
+                          value={toBring} 
+                          onChange={(e) => setToBring(e.target.value)} 
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                          placeholder={t('postAd.toBringPlaceholder')} 
+                        />
+                      </div>
                     </div>
-                    
-                    <div className="space-y-4">
-                      <Label htmlFor="availability" className="text-gray-700 font-semibold">
-                        Availability
-                      </Label>
-                      <select 
-                        id="availability" 
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
-                        value={availability} 
-                        onChange={(e) => setAvailability(e.target.value)}
-                      >
-                        <option value="daily">📅 Daily Available</option>
-                        <option value="weekends">🎯 Weekends Only</option>
-                        <option value="weekdays">💼 Weekdays Only</option>
-                        <option value="appointment">📞 By Appointment</option>
-                        <option value="seasonal">🌟 Seasonal</option>
-                      </select>
+                  )}
+                  
+                  {(serviceType === 'hotel' || serviceType === 'accommodation') && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                      <div>
+                        <Label htmlFor="availability" className="text-gray-700 mb-2 block">
+                          <Calendar className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.availabilityLabel')}
+                        </Label>
+                        <div className="relative">
+                          <select 
+                            id="availability" 
+                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
+                            value={availability} 
+                            onChange={(e) => setAvailability(e.target.value)}
+                          >
+                            <option value="daily"> {t('postAd.daily')}</option>
+                            <option value="seasonal"> {t('postAd.seasonal')}</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="groupSize" className="text-gray-700 mb-2 block">
+                          <Users className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.roomCapacity')}
+                        </Label>
+                        <Input 
+                          id="groupSize" 
+                          value={groupSize} 
+                          onChange={(e) => setGroupSize(e.target.value)} 
+                          placeholder={t('postAd.roomCapacityPlaceholder')} 
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="included" className="text-gray-700 mb-2 block">
+                          {t('postAd.amenitiesIncluded')}
+                        </Label>
+                        <textarea 
+                          id="included" 
+                          rows={2} 
+                          value={included} 
+                          onChange={(e) => setIncluded(e.target.value)} 
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                          placeholder={t('postAd.amenitiesPlaceholder')} 
+                        />
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label htmlFor="included" className="text-gray-700 font-semibold">
-                      What's Included
-                    </Label>
-                    <textarea
-                      id="included"
-                      rows={3}
-                      value={included}
-                      onChange={(e) => setIncluded(e.target.value)}
-                      className="flex w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none"
-                      placeholder="e.g. Professional guide, Transportation, Lunch & snacks, Equipment"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label htmlFor="toBring" className="text-gray-700 font-semibold">
-                      What to Bring
-                    </Label>
-                    <textarea
-                      id="toBring"
-                      rows={3}
-                      value={toBring}
-                      onChange={(e) => setToBring(e.target.value)}
-                      className="flex w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none"
-                      placeholder="e.g. Comfortable shoes, Water bottle, Camera, Sunscreen"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <Label htmlFor="hostName" className="text-gray-700 font-semibold">
-                        Host/Provider Name
+                  )}
+                  
+                  {(serviceType === 'bar' || serviceType === 'ktv') && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                      <div>
+                        <Label htmlFor="availability" className="text-gray-700 mb-2 block">
+                          <Calendar className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.operatingHours')}
+                        </Label>
+                        <div className="relative">
+                          <select 
+                            id="availability" 
+                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
+                            value={availability} 
+                            onChange={(e) => setAvailability(e.target.value)}
+                          >
+                            <option value="daily"> {t('postAd.daily')}</option>
+                            <option value="weekends"> {t('postAd.weekendsOnly')}</option>
+                            <option value="weekdays"> {t('postAd.weekdaysOnly')}</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="groupSize" className="text-gray-700 mb-2 block">
+                          <Users className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.capacity')}
+                        </Label>
+                        <Input 
+                          id="groupSize" 
+                          value={groupSize} 
+                          onChange={(e) => setGroupSize(e.target.value)} 
+                          placeholder={t('postAd.capacityPlaceholder')} 
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="included" className="text-gray-700 mb-2 block">
+                          {t('postAd.servicesFeatures')}
+                        </Label>
+                        <textarea 
+                          id="included" 
+                          rows={2} 
+                          value={included} 
+                          onChange={(e) => setIncluded(e.target.value)} 
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                          placeholder={t('postAd.servicesFeaturesPlaceholder')} 
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {serviceType === 'massage' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                      <div>
+                        <Label htmlFor="duration" className="text-gray-700 mb-2 block">
+                          <Clock className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.sessionDuration')}
+                        </Label>
+                        <Input 
+                          id="duration" 
+                          value={duration} 
+                          onChange={(e) => setDuration(e.target.value)} 
+                          placeholder={t('postAd.sessionDurationPlaceholder')} 
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="availability" className="text-gray-700 mb-2 block">
+                          <Calendar className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.availabilityLabel')}
+                        </Label>
+                        <div className="relative">
+                          <select 
+                            id="availability" 
+                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
+                            value={availability} 
+                            onChange={(e) => setAvailability(e.target.value)}
+                          >
+                            <option value="daily"> {t('postAd.daily')}</option>
+                            <option value="appointment"> {t('postAd.byAppointment')}</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="included" className="text-gray-700 mb-2 block">
+                          {t('postAd.massageTypes')}
+                        </Label>
+                        <textarea 
+                          id="included" 
+                          rows={2} 
+                          value={included} 
+                          onChange={(e) => setIncluded(e.target.value)} 
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                          placeholder={t('postAd.massageTypesPlaceholder')} 
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {serviceType === 'gym' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                      <div>
+                        <Label htmlFor="availability" className="text-gray-700 mb-2 block">
+                          <Calendar className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.operatingHours')}
+                        </Label>
+                        <div className="relative">
+                          <select 
+                            id="availability" 
+                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
+                            value={availability} 
+                            onChange={(e) => setAvailability(e.target.value)}
+                          >
+                            <option value="daily"> {t('postAd.daily')}</option>
+                            <option value="weekdays"> {t('postAd.weekdaysOnly')}</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="duration" className="text-gray-700 mb-2 block">
+                          <Clock className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.membershipDuration')}
+                        </Label>
+                        <Input 
+                          id="duration" 
+                          value={duration} 
+                          onChange={(e) => setDuration(e.target.value)} 
+                          placeholder={t('postAd.membershipDurationPlaceholder')} 
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="included" className="text-gray-700 mb-2 block">
+                          {t('postAd.facilitiesEquipment')}
+                        </Label>
+                        <textarea 
+                          id="included" 
+                          rows={2} 
+                          value={included} 
+                          onChange={(e) => setIncluded(e.target.value)} 
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                          placeholder={t('postAd.facilitiesEquipmentPlaceholder')} 
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(serviceType === 'tea' || serviceType === 'coffee' || serviceType === 'restaurant') && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                      <div>
+                        <Label htmlFor="availability" className="text-gray-700 mb-2 block">
+                          <Calendar className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.operatingHours')}
+                        </Label>
+                        <div className="relative">
+                          <select 
+                            id="availability" 
+                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
+                            value={availability} 
+                            onChange={(e) => setAvailability(e.target.value)}
+                          >
+                            <option value="daily"> {t('postAd.daily')}</option>
+                            <option value="weekdays"> {t('postAd.weekdaysOnly')}</option>
+                            <option value="weekends"> {t('postAd.weekendsOnly')}</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="groupSize" className="text-gray-700 mb-2 block">
+                          <Users className="inline-block w-4 h-4 mr-1" />
+                          {t('postAd.seatingCapacity')}
+                        </Label>
+                        <Input 
+                          id="groupSize" 
+                          value={groupSize} 
+                          onChange={(e) => setGroupSize(e.target.value)} 
+                          placeholder={t('postAd.seatingCapacityPlaceholder')} 
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="included" className="text-gray-700 mb-2 block">
+                          {t('postAd.menuSpecialties')}
+                        </Label>
+                        <textarea 
+                          id="included" 
+                          rows={2} 
+                          value={included} 
+                          onChange={(e) => setIncluded(e.target.value)} 
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                          placeholder={t('postAd.menuSpecialtiesPlaceholder')} 
+                        />
+                      </div>
+                      {serviceType === 'restaurant' && (
+                        <div className="md:col-span-2">
+                          <Label htmlFor="toBring" className="text-gray-700 mb-2 block">
+                            {t('postAd.cuisineType')}
+                          </Label>
+                          <Input 
+                            id="toBring" 
+                            value={toBring} 
+                            onChange={(e) => setToBring(e.target.value)} 
+                            placeholder={t('postAd.cuisineTypePlaceholder')} 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Common fields for service provider info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                    <div>
+                      <Label htmlFor="hostName" className="text-gray-700 mb-2 block">
+                        <User className="inline-block w-4 h-4 mr-1" />
+                        {serviceType === 'hotel' || serviceType === 'accommodation' ? t('postAd.propertyName') : 
+                         serviceType === 'bar' || serviceType === 'ktv' ? t('postAd.businessName') :
+                         serviceType === 'massage' ? t('postAd.spaTherapistName') :
+                         serviceType === 'gym' ? t('postAd.gymName') :
+                         serviceType === 'tea' || serviceType === 'coffee' || serviceType === 'restaurant' ? t('postAd.restaurantName') :
+                         t('postAd.hostNameLabel')}
                       </Label>
                       <Input 
                         id="hostName" 
                         value={hostName} 
                         onChange={(e) => setHostName(e.target.value)} 
-                        placeholder="Your name or business name" 
-                        className="py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
+                        placeholder={serviceType === 'hotel' || serviceType === 'accommodation' ? t('postAd.propertyNamePlaceholder') :
+                                   serviceType === 'bar' || serviceType === 'ktv' ? t('postAd.businessNamePlaceholder') :
+                                   serviceType === 'massage' ? t('postAd.spaTherapistNamePlaceholder') :
+                                   serviceType === 'gym' ? t('postAd.gymNamePlaceholder') :
+                                   serviceType === 'tea' || serviceType === 'coffee' || serviceType === 'restaurant' ? t('postAd.restaurantNamePlaceholder') :
+                                   t('postAd.hostNamePlaceholder')} 
                       />
                     </div>
-                    
-                    <div className="space-y-4">
-                      <Label htmlFor="hostExperience" className="text-gray-700 font-semibold">
-                        Experience/Qualification
+                    <div>
+                      <Label htmlFor="hostExperience" className="text-gray-700 mb-2 block">
+                        {serviceType === 'hotel' || serviceType === 'accommodation' ? t('postAd.starRating') :
+                         serviceType === 'bar' || serviceType === 'ktv' ? t('postAd.yearsInBusiness') :
+                         serviceType === 'massage' ? t('postAd.therapistExperience') :
+                         serviceType === 'gym' ? t('postAd.certifications') :
+                         serviceType === 'tea' || serviceType === 'coffee' || serviceType === 'restaurant' ? t('postAd.yearsInBusiness') :
+                         t('postAd.hostExperienceLabel')}
                       </Label>
                       <Input 
                         id="hostExperience" 
                         value={hostExperience} 
                         onChange={(e) => setHostExperience(e.target.value)} 
-                        placeholder="e.g. 5+ years experience, Certified guide" 
-                        className="py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
+                        placeholder={serviceType === 'hotel' || serviceType === 'accommodation' ? t('postAd.starRatingPlaceholder') :
+                                   serviceType === 'bar' || serviceType === 'ktv' ? t('postAd.yearsInBusinessPlaceholder') :
+                                   serviceType === 'massage' ? t('postAd.therapistExperiencePlaceholder') :
+                                   serviceType === 'gym' ? t('postAd.certificationsPlaceholder') :
+                                   serviceType === 'tea' || serviceType === 'coffee' || serviceType === 'restaurant' ? t('postAd.yearsInBusinessPlaceholder') :
+                                   t('postAd.hostExperiencePlaceholder')} 
                       />
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <Label htmlFor="serviceFee" className="text-gray-700 font-semibold flex items-center">
-                        <DollarSign className="w-4 h-4 mr-2 text-green-500" />
-                        Service Fee
-                      </Label>
-                      <Input 
-                        id="serviceFee" 
-                        value={serviceFee} 
-                        onChange={(e) => setServiceFee(e.target.value)} 
-                        placeholder="15" 
-                        className="py-4 px-6 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg"
-                      />
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <Label htmlFor="cancellationPolicy" className="text-gray-700 font-semibold">
-                        Cancellation Policy
-                      </Label>
+                  
+                  <div>
+                    <Label htmlFor="cancellationPolicy" className="text-gray-700 mb-2 block">
+                      <Shield className="inline-block w-4 h-4 mr-1" />
+                      {t('postAd.cancellationPolicyLabel')}
+                    </Label>
+                    <div className="relative">
                       <select 
                         id="cancellationPolicy" 
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
+                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none" 
                         value={cancellationPolicy} 
                         onChange={(e) => setCancellationPolicy(e.target.value)}
                       >
-                        <option value="flexible">✅ Flexible - Free cancellation 24h before</option>
-                        <option value="moderate">⚠️ Moderate - Free cancellation 48h before</option>
-                        <option value="strict">❌ Strict - No free cancellation</option>
+                        <option value="flexible">{t('postAd.flexible')}</option>
+                        <option value="moderate"> {t('postAd.moderate')}</option>
+                        <option value="strict">{t('postAd.strict')}</option>
                       </select>
+                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Submit Button */}
-              <div className="flex justify-center pt-8">
-                <Button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full"
-                  size="lg"
-                >
-                  {loading ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Creating Post...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Publish Listing
-                    </>
-                  )}
-                </Button>
               </div>
+            )}
+            
+            <div className="flex justify-between pt-6">
+              <Button 
+                onClick={prevStep}
+                variant="outline" 
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-lg"
+              >
+                Back
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading} 
+                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg"
+              >
+                {loading ? (
+                  <div className="flex items-center">
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    {t('postAd.publishing')}
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Check className="mr-2 h-5 w-5" />
+                    {t('postAd.publishAd')}
+                  </div>
+                )}
+              </Button>
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('postAd.title')}</h1>
+          <p className="text-gray-600">{t('postAd.subtitle')}</p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <div className={`text-sm font-medium ${activeStep >= 1 ? 'text-blue-600' : 'text-gray-500'}`}>Category</div>
+            <div className={`text-sm font-medium ${activeStep >= 2 ? 'text-blue-600' : 'text-gray-500'}`}>Details</div>
+            <div className={`text-sm font-medium ${activeStep >= 3 ? 'text-blue-600' : 'text-gray-500'}`}>Additional Info</div>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div 
+              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+              style={{ width: `${(activeStep / 3) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit}>
+              {renderStep()}
             </form>
           </CardContent>
         </Card>

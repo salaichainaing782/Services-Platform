@@ -9,6 +9,8 @@ import MarketplacePage from './pages/MarketplacePage';
 import SecondhandPage from './pages/SecondhandPage';
 import JobsPage from './pages/JobsPage';
 import TravelPage from './pages/TravelPage';
+import ServicesPage from './pages/ServicesPage';
+
 import TravelDetailPage from './pages/TravelDetailPage';
 import JobDetailPage from './pages/JobDetailPage';
 import LoginPage from './pages/LoginPage';
@@ -85,6 +87,8 @@ function App() {
             <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/secondhand" element={<SecondhandPage />} />
             <Route path="/jobs" element={<JobsPage />} />
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/services/:id" element={<TravelDetailPage />} />
             <Route path="/travel" element={<TravelPage />} />
             <Route path="/travel/:id" element={<TravelDetailPage />} />
             <Route path="/jobs/:id" element={<JobDetailPage />} />
@@ -150,10 +154,11 @@ function App() {
               <div>
                 <h3 className="font-semibold mb-4">Categories</h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li><a href="#" className="hover:text-primary transition-colors">Marketplace</a></li>
-                  <li><a href="#" className="hover:text-primary transition-colors">Second-hand</a></li>
-                  <li><a href="#" className="hover:text-primary transition-colors">Jobs</a></li>
-                  <li><a href="#" className="hover:text-primary transition-colors">Travel</a></li>
+                  <li><a href="/marketplace" className="hover:text-primary transition-colors">Marketplace</a></li>
+                  <li><a href="/secondhand" className="hover:text-primary transition-colors">Second-hand</a></li>
+                  <li><a href="/jobs" className="hover:text-primary transition-colors">Jobs</a></li>
+                  <li><a href="/services" className="hover:text-primary transition-colors">Services</a></li>
+                  <li><a href="/travel" className="hover:text-primary transition-colors">Travel</a></li>
                 </ul>
               </div>
               

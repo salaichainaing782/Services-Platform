@@ -223,7 +223,8 @@ const StatCard = ({ title, value, icon, color, delay }: {
       },
   };
 
-  const currentStyle = colorStyles[color] || { bg: 'from-gray-100 to-gray-200', text: 'text-gray-600' };
+  const emeraldStyle = { bg: 'from-emerald-100 to-emerald-200', text: 'text-emerald-600' };
+  const currentStyle = color === 'emerald' ? emeraldStyle : (colorStyles[color] || { bg: 'from-gray-100 to-gray-200', text: 'text-gray-600' });
     return ( 
         <div 
             ref={ref} 
@@ -384,7 +385,8 @@ export const DashboardPage = () => {
         totalProducts: 0,
         totalViews: 0,
         totalFavorites: 0,
-        averageRating: '0.0'
+        averageRating: '0.0',
+        totalValue: 0
     });
     const [alertCount, setAlertCount] = useState(0);
     const [orderNotificationCount, setOrderNotificationCount] = useState(0);
@@ -471,11 +473,14 @@ export const DashboardPage = () => {
                 ? products.reduce((sum, product) => sum + (product.rating || 0), 0) / products.length 
                 : 0;
             
+            const totalValue = products.reduce((sum, product) => sum + (product.price || 0), 0);
+            
             setStats({ 
                 totalProducts: products.length, 
                 totalViews, 
                 totalFavorites, 
-                averageRating: avgRating.toFixed(1) 
+                averageRating: avgRating.toFixed(1),
+                totalValue 
             });
             
             // Calculate alert count
@@ -693,16 +698,18 @@ const Sidebar = () => (
 
 // --- Content Components ---
 const OverviewContent = ({ stats, products }: { stats: any, products: Product[] }) => {
+    const DollarIcon = () => <span className="text-lg font-bold">$</span>;
     const statItems = [ 
         { title: 'Total Products', value: stats.totalProducts, icon: Package, color: 'indigo' }, 
         { title: 'Total Views', value: stats.totalViews, icon: Eye, color: 'sky' }, 
+        { title: 'Total Value', value: `$${stats.totalValue.toFixed(2)}`, icon: DollarIcon, color: 'emerald' }, 
         { title: 'Favorites', value: stats.totalFavorites, icon: Heart, color: 'rose' }, 
         { title: 'Avg. Rating', value: stats.averageRating, icon: Star, color: 'amber' }, 
     ];
     return (
         <div className="space-y-8">
             <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Dashboard Overview</h1>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
                 {statItems.map((stat, i) => ( <StatCard key={stat.title} {...stat} delay={i * 100} /> ))}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">

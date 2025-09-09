@@ -31,7 +31,7 @@ const getAllProducts = async (req, res) => {
       query.category = { $in: categories };
     }
 
-    // Price range filter
+    // Price range filter (exclude jobs and services)
     if (req.query.minPrice || req.query.maxPrice) {
       query.price = {};
       if (req.query.minPrice) {
@@ -40,6 +40,8 @@ const getAllProducts = async (req, res) => {
       if (req.query.maxPrice) {
         query.price.$lte = parseFloat(req.query.maxPrice);
       }
+      // Only apply price filter to categories that have prices
+      query.category = { $nin: ['jobs', 'services'] };
     }
 
     // Location filter
@@ -60,6 +62,11 @@ const getAllProducts = async (req, res) => {
     // Experience filter
     if (req.query.experience) {
       query.experience = req.query.experience;
+    }
+
+    // Service type filter
+    if (req.query.serviceType) {
+      query.serviceType = req.query.serviceType;
     }
 
     // Trip type filter

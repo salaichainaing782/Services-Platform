@@ -13,7 +13,7 @@ interface ProductCardProps {
   location?: string;
   rating?: number;
   image: string;
-  category: 'marketplace' | 'secondhand' | 'jobs' | 'travel';
+  category: 'marketplace' | 'secondhand' | 'jobs' | 'services' | 'travel';
   featured?: boolean;
   className?: string;
   views?: number;
@@ -49,6 +49,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       switch (category) {
         case 'jobs':
           window.location.href = `/jobs/${id}`;
+          break;
+        case 'services':
+          window.location.href = `/services/${id}`;
           break;
         case 'travel':
           window.location.href = `/travel/${id}`;
@@ -110,6 +113,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       case 'marketplace': return 'bg-blue-500';
       case 'secondhand': return 'bg-green-500';
       case 'jobs': return 'bg-purple-500';
+      case 'services': return 'bg-amber-500';
       case 'travel': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
@@ -120,6 +124,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       case 'marketplace': return 'New';
       case 'secondhand': return 'Used';
       case 'jobs': return 'Job';
+      case 'services': return 'Service';
       case 'travel': return 'Trip';
       default: return '';
     }

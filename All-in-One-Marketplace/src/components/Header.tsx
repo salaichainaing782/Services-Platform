@@ -59,7 +59,8 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, user }) => {
     { id: 'marketplace', label: t('marketplace.title'), icon: null },
     { id: 'secondhand', label: t('secondhand.title'), icon: null },
     { id: 'jobs', label: t('jobs.title'), icon: null },
-    { id: 'travel', label: 'Service', icon: null }
+    { id: 'services', label: 'Services', icon: null },
+    { id: 'travel', label: t('travel.title'), icon: null }
   ];
 
   const languages = [

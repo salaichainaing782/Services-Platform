@@ -69,7 +69,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['card', 'paypal', 'cod'],
+    enum: ['kbz', 'aya', 'cb', 'wave', 'card', 'paypal', 'cod'],
     required: true
   },
   subtotal: {

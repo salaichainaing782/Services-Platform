@@ -363,12 +363,69 @@ const CheckoutPage: React.FC = () => {
                   <CreditCard className="h-5 w-5 mr-2" />
                   Payment Method
                 </h2>
+                
+                {/* Myanmar Payment Methods */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, paymentMethod: 'kbz'})}
+                    className={`flex items-center justify-center space-x-2 p-3 border-2 rounded-lg transition-colors ${
+                      formData.paymentMethod === 'kbz' 
+                        ? 'border-blue-500 bg-blue-50 text-blue-600' 
+                        : 'border-gray-300 hover:border-blue-300'
+                    }`}
+                  >
+                    <span className="font-bold text-lg">KBZ</span>
+                    <span className="text-sm">Pay</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, paymentMethod: 'aya'})}
+                    className={`flex items-center justify-center space-x-2 p-3 border-2 rounded-lg transition-colors ${
+                      formData.paymentMethod === 'aya' 
+                        ? 'border-green-500 bg-green-50 text-green-600' 
+                        : 'border-gray-300 hover:border-green-300'
+                    }`}
+                  >
+                    <span className="font-bold text-lg">AYA</span>
+                    <span className="text-sm">Pay</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, paymentMethod: 'cb'})}
+                    className={`flex items-center justify-center space-x-2 p-3 border-2 rounded-lg transition-colors ${
+                      formData.paymentMethod === 'cb' 
+                        ? 'border-purple-500 bg-purple-50 text-purple-600' 
+                        : 'border-gray-300 hover:border-purple-300'
+                    }`}
+                  >
+                    <span className="font-bold text-lg">CB</span>
+                    <span className="text-sm">Pay</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, paymentMethod: 'wave'})}
+                    className={`flex items-center justify-center space-x-2 p-3 border-2 rounded-lg transition-colors ${
+                      formData.paymentMethod === 'wave' 
+                        ? 'border-pink-500 bg-pink-50 text-pink-600' 
+                        : 'border-gray-300 hover:border-pink-300'
+                    }`}
+                  >
+                    <span className="font-bold text-lg">Wave</span>
+                    <span className="text-sm">Pay</span>
+                  </button>
+                </div>
+                
                 <select
                   name="paymentMethod"
                   value={formData.paymentMethod}
                   onChange={handleInputChange}
                   className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4"
                 >
+                  <option value="kbz">KBZ Pay</option>
+                  <option value="aya">AYA Pay</option>
+                  <option value="cb">CB Pay</option>
+                  <option value="wave">Wave Pay</option>
                   <option value="card">Credit/Debit Card</option>
                   <option value="paypal">PayPal</option>
                   <option value="cod">Cash on Delivery</option>
