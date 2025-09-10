@@ -22,6 +22,7 @@ const validateProduct = [
     .isFloat({ min: 0, max: 5 })
     .withMessage('Rating must be between 0 and 5'),
   body('image')
+    .optional()
     .isURL()
     .withMessage('Image must be a valid URL'),
   body('category')

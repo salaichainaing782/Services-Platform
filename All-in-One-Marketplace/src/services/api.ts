@@ -244,6 +244,10 @@ class ApiClient {
     return this.request<{ message: string }>(`/products/${id}/views`, { method: 'POST' });
   }
 
+  async getPriceRange(category: string): Promise<{ minPrice: number; maxPrice: number }> {
+    return this.request<{ minPrice: number; maxPrice: number }>(`/products/range/${category}`);
+  }
+
   async purchaseProduct(id: string, qty: number): Promise<{ message: string; product: Product }>{
     return this.request<{ message: string; product: Product }>(`/products/${id}/purchase`, {
       method: 'POST',
@@ -264,6 +268,16 @@ class ApiClient {
       limit?: number;
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
+      search?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      location?: string;
+      condition?: string;
+      sellerType?: string;
+      jobType?: string;
+      experience?: string;
+      serviceType?: string;
+      tripType?: string;
     }
   ): Promise<PaginatedResponse<Product>> {
     const searchParams = new URLSearchParams();
@@ -498,6 +512,29 @@ class ApiClient {
       method: 'POST',
     });
     return response;
+  }
+
+  // Rating API
+  async addRating(productId: string, rating: number, review?: string): Promise<{ message: string; rating: any }> {
+    const response = await this.request<{ message: string; rating: any }>(`/ratings/product/${productId}`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, review }),
+    });
+    return response;
+  }
+
+  async getProductRatings(productId: string, params?: { page?: number; limit?: number }): Promise<{ ratings: any[]; pagination: any }> {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+    }
+    const queryString = searchParams.toString();
+    const endpoint = `/ratings/product/${productId}${queryString ? `?${queryString}` : ''}`;
+    return this.request<{ ratings: any[]; pagination: any }>(endpoint);
   }
 
   // Job application API

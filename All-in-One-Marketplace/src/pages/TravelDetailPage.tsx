@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, Share, MessageCircle, User, Send, ThumbsUp, MapPin, Clock, Star, Calendar, Users, Phone, Mail, Globe, Shield, Award, CheckCircle, ChevronRight, Image, Video, Bookmark, Flag, Eye, Download } from 'lucide-react';
+import { ArrowLeft, Heart, Share, MessageCircle, User, Send, ThumbsUp, MapPin, Clock, Star, Calendar, Users, Phone, Mail, Globe, Shield, Award, CheckCircle, ChevronRight, Image, Video, Bookmark, Flag, Eye, Download, X, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/api';
+import RatingComponent from '../components/RatingComponent';
 
 const TravelDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,8 +38,19 @@ const TravelDetailPage: React.FC = () => {
       setLoading(true);
       const productData = await apiClient.getProductById(id!);
       setProduct(productData);
-      setIsLiked(productData.isLiked || false);
+      // Check if current user has liked this product
+      const userHasLiked = isAuthenticated && user && productData.likes && 
+        productData.likes.some(likeId => likeId === user.id || likeId.toString() === user.id);
+      setIsLiked(userHasLiked || productData.isLiked || false);
       setIsBookmarked(productData.isBookmarked || false);
+      
+      // Increment view count
+      try {
+        await apiClient.incrementProductViews(id!);
+        setProduct(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
+      } catch (e) {
+        console.error('Failed to increment view count:', e);
+      }
     } catch (error: any) {
       setError(error.message || `Failed to load ${product?.category === 'services' ? 'service' : 'product'}`);
     } finally {
@@ -79,7 +91,14 @@ const TravelDetailPage: React.FC = () => {
     }
     try {
       const result = await apiClient.likeProduct(id!);
-      setProduct(prev => ({ ...prev, likesCount: result.likes, isLiked: result.isLiked }));
+      setProduct(prev => ({ 
+        ...prev, 
+        likesCount: result.likes, 
+        isLiked: result.isLiked,
+        likes: result.isLiked 
+          ? [...(prev.likes || []), user?.id] 
+          : (prev.likes || []).filter(likeId => likeId !== user?.id)
+      }));
       setIsLiked(result.isLiked);
     } catch (error) {
       console.error(`Failed to like ${isService ? 'service' : 'product'}:`, error);
@@ -148,17 +167,19 @@ const TravelDetailPage: React.FC = () => {
     }
   };
 
-  const productImages = isService ? [
-    product?.image,
-    'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=600&fit=crop'
-  ] : [
-    product?.image,
-    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&h=600&fit=crop'
-  ];
+  const productImages = product?.images && Array.isArray(product.images) && product.images.length > 0 
+    ? product.images.slice(0, 4)
+    : [product?.image].filter(Boolean).slice(0, 4);
+  
+  // Auto-slide functionality
+  useEffect(() => {
+    if (productImages.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % productImages.length);
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [productImages.length]);
 
   const getServiceTypeLabel = (serviceType: string) => {
     const serviceTypes = {
@@ -388,12 +409,12 @@ const TravelDetailPage: React.FC = () => {
                   onClick={handleLike}
                   className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all ${
                     isLiked 
-                      ? (isService ? 'bg-amber-100 text-amber-600 shadow-amber-100' : 'bg-indigo-100 text-indigo-600 shadow-indigo-100') 
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      ? 'bg-red-100 text-red-600 shadow-red-100' 
+                      : 'bg-gray-50 text-gray-600 hover:bg-red-50 hover:text-red-600'
                   } shadow-sm hover:shadow-md`}
                 >
-                  <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
-                  <span className="font-semibold">{product.likesCount || 0}</span>
+                  <Heart className={`w-6 h-6 ${isLiked ? 'fill-current text-red-600' : 'text-gray-600'}`} />
+                  <span className="font-semibold">{product.likesCount || product.likes?.length || 0}</span>
                 </button>
                 
                 <button className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 shadow-sm hover:shadow-md transition-all">
@@ -417,6 +438,23 @@ const TravelDetailPage: React.FC = () => {
                 <p className="text-gray-700 leading-relaxed text-lg">
                   {product.description}
                 </p>
+              </div>
+
+              {/* Rating Section */}
+              <div className="mt-8 border-t pt-8">
+                <h3 className="text-2xl font-semibold mb-6 text-gray-900">Ratings & Reviews</h3>
+                <RatingComponent 
+                  productId={product._id || product.id}
+                  currentRating={product.rating || 0}
+                  totalReviews={product.totalReviews || 0}
+                  onRatingUpdate={(rating, totalReviews) => {
+                    setProduct(prev => prev ? { ...prev, rating, totalReviews } : null);
+                  }}
+                />
+              </div>
+
+              <div className="mt-8">
+                <h3 className="text-2xl font-semibold mb-4 text-gray-900">Additional Information</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   {product.included && (
@@ -456,7 +494,6 @@ const TravelDetailPage: React.FC = () => {
                 {isService ? 'Customer Reviews' : 'Traveler Reviews'} ({comments.length})
               </h3>
 
-              {/* Add Comment */}
               {isAuthenticated ? (
                 <div className="flex space-x-4 mb-8">
                   <div className={`w-12 h-12 ${isService ? 'bg-gradient-to-br from-amber-100 to-orange-100' : 'bg-gradient-to-br from-indigo-100 to-blue-100'} rounded-full flex items-center justify-center flex-shrink-0`}>
@@ -494,8 +531,7 @@ const TravelDetailPage: React.FC = () => {
                   <p className="text-gray-600 text-lg font-medium">Sign in to share your experience</p>
                 </div>
               )}
-
-              {/* Comments List */}
+              
               <div className="space-y-6">
                 {comments.map(comment => (
                   <div key={comment._id} className="flex space-x-4">
@@ -590,6 +626,7 @@ const TravelDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
+
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-xl p-6 sticky top-24">
               <h3 className="text-xl font-bold mb-6 text-gray-900">{isService ? 'Service Information' : 'Book Your Adventure'}</h3>

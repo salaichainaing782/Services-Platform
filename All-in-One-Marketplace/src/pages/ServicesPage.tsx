@@ -1,12 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '../services/api';
-import { ProductCard } from '../components/ProductCard';
-import { ChevronDown, Filter, Search, Heart, MessageCircle, MapPin, Star, Clock, Zap, Sparkles, X, Send, User, ThumbsUp } from 'lucide-react';
+import { ChevronDown, Filter, Search, Heart, MessageCircle, MapPin, Star, Clock, Zap, Sparkles, X, Send, User, ThumbsUp, Brush, Code, BarChart2, BookOpen, Airplay, Home, Coffee, Music, HeartPulse, Dumbbell, CoffeeIcon, LucideCoffee } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+
+const ImageSlider: React.FC<{ images: string[], title: string }> = ({ images, title }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  useEffect(() => {
+    if (images && images.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % images.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [images.length]);
+  
+  // Handle case where images might be undefined or empty
+  if (!images || images.length === 0) {
+    return (
+      <div className="h-48 overflow-hidden bg-gray-200 flex items-center justify-center">
+        <span className="text-gray-400">No image</span>
+      </div>
+    );
+  }
+  
+  if (images.length === 1) {
+    return (
+      <div className="h-48 overflow-hidden">
+        <img 
+          src={images[0]} 
+          alt={title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="h-48 overflow-hidden relative">
+      {images.map((image, index) => (
+        <img 
+          key={index}
+          src={image} 
+          alt={`${title} ${index + 1}`}
+          className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 absolute top-0 left-0 ${
+            index === currentIndex ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{ transition: 'opacity 0.5s ease-in-out' }}
+        />
+      ))}
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+        {images.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            className={`w-2 h-2 rounded-full transition-all ${
+              currentIndex === index ? 'bg-white' : 'bg-white/50'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 interface Product {
   _id: string;
@@ -14,6 +74,7 @@ interface Product {
   title: string;
   description: string;
   image: string;
+  images?: string[];
   location?: string;
   views: number;
   favorites: number;
@@ -67,25 +128,25 @@ const ServicesPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  const serviceTypes = [
-    { value: '', label: 'All Services', icon: <Zap className="w-4 h-4" /> },
-    { value: 'consulting', label: t('postAd.consulting'), icon: <Sparkles className="w-4 h-4" /> },
-    { value: 'design', label: t('postAd.design'), icon: <span className="text-lg">🎨</span> },
-    { value: 'development', label: t('postAd.development'), icon: <span className="text-lg">💻</span> },
-    { value: 'marketing', label: t('postAd.marketing'), icon: <span className="text-lg">📈</span> },
-    { value: 'education', label: t('postAd.education'), icon: <span className="text-lg">📚</span> },
-    { value: 'travel', label: t('postAd.travel'), icon: <span className="text-lg">✈️</span> },
-    { value: 'hotel', label: t('postAd.hotel'), icon: <span className="text-lg">🏨</span> },
-    { value: 'accommodation', label: t('postAd.accommodation'), icon: <span className="text-lg">🏠</span> },
-    { value: 'bar', label: t('postAd.bar'), icon: <span className="text-lg">🍸</span> },
-    { value: 'ktv', label: t('postAd.ktv'), icon: <span className="text-lg">🎤</span> },
-    { value: 'massage', label: t('postAd.massage'), icon: <span className="text-lg">💆</span> },
-    { value: 'gym', label: t('postAd.gym'), icon: <span className="text-lg">💪</span> },
-    { value: 'tea', label: t('postAd.tea'), icon: <span className="text-lg">🍵</span> },
-    { value: 'coffee', label: t('postAd.coffee'), icon: <span className="text-lg">☕</span> },
-    { value: 'restaurant', label: t('postAd.restaurant'), icon: <span className="text-lg">🍽️</span> },
-    { value: 'other', label: t('postAd.other'), icon: <span className="text-lg">🔧</span> }
-  ];
+const serviceTypes = [
+  { value: '', label: 'All Services', icon: <Zap className="w-4 h-4" /> },
+  { value: 'consulting', label: t('postAd.consulting'), icon: <Sparkles className="w-4 h-4" /> },
+  { value: 'design', label: t('postAd.design'), icon: <Brush className="w-4 h-4" /> },
+  { value: 'development', label: t('postAd.development'), icon: <Code className="w-4 h-4" /> },
+  { value: 'marketing', label: t('postAd.marketing'), icon: <BarChart2 className="w-4 h-4" /> },
+  { value: 'education', label: t('postAd.education'), icon: <BookOpen className="w-4 h-4" /> },
+  { value: 'travel', label: t('postAd.travel'), icon: <Airplay className="w-4 h-4" /> },
+  { value: 'hotel', label: t('postAd.hotel'), icon: <Home className="w-4 h-4" /> },
+  { value: 'accommodation', label: t('postAd.accommodation'), icon: <Home className="w-4 h-4" /> },
+  { value: 'bar', label: t('postAd.bar'), icon: <Coffee className="w-4 h-4" /> },
+  { value: 'ktv', label: t('postAd.ktv'), icon: <Music className="w-4 h-4" /> },
+  { value: 'massage', label: t('postAd.massage'), icon: <HeartPulse className="w-4 h-4" /> },
+  { value: 'gym', label: t('postAd.gym'), icon: <Dumbbell className="w-4 h-4" /> },
+  { value: 'tea', label: t('postAd.tea'), icon: <CoffeeIcon className="w-4 h-4" /> },
+  { value: 'coffee', label: t('postAd.coffee'), icon: <LucideCoffee className="w-4 h-4" /> },
+  { value: 'restaurant', label: t('postAd.restaurant'), icon: <Coffee className="w-4 h-4" /> },
+  { value: 'other', label: t('postAd.other'), icon: <Coffee className="w-4 h-4" /> }
+];
 
   const sortOptions = [
     { value: 'newest', label: t('marketplace.newest') },
@@ -98,21 +159,21 @@ const ServicesPage: React.FC = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '12',
+      const params = {
+        page: currentPage,
+        limit: 12,
         sortBy: sortBy === 'newest' ? 'createdAt' : sortBy,
-        sortOrder: 'desc'
-      });
+        sortOrder: 'desc' as 'desc'
+      };
 
       if (searchTerm) {
-        params.append('search', searchTerm);
+        params.search = searchTerm;
       }
       if (selectedServiceType) {
-        params.append('serviceType', selectedServiceType);
+        params.serviceType = selectedServiceType;
       }
 
-      const response = await apiClient.getProductsByCategory('services', params.toString());
+      const response = await apiClient.getProductsByCategory('services', params);
       const productsWithCounts = (response.products || []).map(product => ({
         ...product,
         likesCount: product.likesCount || product.likes?.length || Math.floor(Math.random() * 50),
@@ -245,12 +306,11 @@ const ServicesPage: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [currentPage, sortBy, selectedServiceType]);
+  }, [currentPage, sortBy, selectedServiceType, searchTerm]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchProducts();
   };
 
   const handleLoadMore = () => {
@@ -341,7 +401,7 @@ const ServicesPage: React.FC = () => {
                             <button 
                               onClick={() => handleCommentLike(comment._id)}
                               className={`flex items-center space-x-1 text-xs transition-colors ${
-                                comment.isLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                                comment.isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'
                               }`}
                             >
                               <Heart className={`w-3 h-3 ${comment.isLiked ? 'fill-current' : ''}`} />
@@ -377,7 +437,7 @@ const ServicesPage: React.FC = () => {
                                 <button 
                                   onClick={() => handleCommentLike(reply._id)}
                                   className={`flex items-center space-x-1 text-xs transition-colors mt-1 ${
-                                    reply.isLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                                    reply.isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'
                                   }`}
                                 >
                                   <Heart className={`w-3 h-3 ${reply.isLiked ? 'fill-current' : ''}`} />
@@ -458,7 +518,10 @@ const ServicesPage: React.FC = () => {
                 type="text"
                 placeholder="Search services, providers, or keywords..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="pl-12 py-3 rounded-xl border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -581,13 +644,10 @@ const ServicesPage: React.FC = () => {
                   onClick={() => handleCardClick(product._id || product.id)}
                 >
                   <div className="relative">
-                    <div className="h-48 overflow-hidden">
-                      <img 
-                        src={product.image} 
-                        alt={product.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
+                    <ImageSlider 
+                      images={product.images && Array.isArray(product.images) ? product.images : [product.image]}
+                      title={product.title}
+                    />
                     <div className="absolute top-3 left-3">
                       <span className="px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded-full">
                         {product.serviceType || 'Service'}

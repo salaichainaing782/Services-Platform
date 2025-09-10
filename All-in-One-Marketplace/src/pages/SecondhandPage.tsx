@@ -84,14 +84,33 @@ const ProductCard = ({ id, title, price, location, rating, image, className = ''
     );
 };
 
-// 2. SearchFilters Component (Unchanged)
-const SearchFilters = ({ category }) => (
+// 2. SearchFilters Component
+const SearchFilters = ({ category, priceRange, onPriceRangeChange, priceRangeLimits }) => (
  <div>
     <h4 className="font-medium mb-3">Price Range</h4>
-    <div className="flex items-center space-x-2">
-        <input type="number" placeholder="$ Min" className="w-full p-2 text-sm border rounded-md focus:ring-green-500 focus:border-green-500" />
-        <span className="text-gray-500">-</span>
-        <input type="number" placeholder="$ Max" className="w-full p-2 text-sm border rounded-md focus:ring-green-500 focus:border-green-500" />
+    <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+            <input 
+                type="number" 
+                placeholder="$ Min" 
+                value={priceRange.min}
+                onChange={(e) => onPriceRangeChange('min', e.target.value)}
+                className="w-full p-2 text-sm border rounded-md focus:ring-green-500 focus:border-green-500" 
+            />
+            <span className="text-gray-500">-</span>
+            <input 
+                type="number" 
+                placeholder="$ Max" 
+                value={priceRange.max}
+                onChange={(e) => onPriceRangeChange('max', e.target.value)}
+                className="w-full p-2 text-sm border rounded-md focus:ring-green-500 focus:border-green-500" 
+            />
+        </div>
+        {priceRangeLimits.maxPrice > 0 && (
+            <p className="text-xs text-gray-500">
+                Range: ${priceRangeLimits.minPrice} - ${priceRangeLimits.maxPrice}
+            </p>
+        )}
     </div>
  </div>
 );
@@ -182,10 +201,28 @@ export const App = () => {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [showLoginModal, setShowLoginModal] = useState(false);
+    const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+    const [priceRangeLimits, setPriceRangeLimits] = useState({ minPrice: 0, maxPrice: 0 });
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCondition, setSelectedCondition] = useState('');
+    const [selectedSellerType, setSelectedSellerType] = useState('');
 
     // --- UI အတွက် state တွေ ---
     const [viewMode, setViewMode] = useState('grid');
     const [sortBy, setSortBy] = useState('newest');
+
+    // Fetch price range limits
+    useEffect(() => {
+        const fetchPriceRange = async () => {
+            try {
+                const priceData = await apiClient.getPriceRange('secondhand');
+                setPriceRangeLimits(priceData);
+            } catch (e) {
+                console.error('Failed to fetch price range:', e);
+            }
+        };
+        fetchPriceRange();
+    }, []);
 
     // --- 2. Backend မှ real data ကို fetch လုပ်ရန် useEffect ကို အသုံးပြုခြင်း ---
     useEffect(() => {
@@ -194,10 +231,19 @@ export const App = () => {
                 setError('');
                 setLoading(true);
                 
-                const response = await apiClient.getProductsByCategory('secondhand', { 
+                const params = { 
                     page, 
-                    limit: 12 
-                });
+                    limit: 12,
+                    sortBy: sortBy === 'newest' ? 'createdAt' : sortBy,
+                    sortOrder: 'desc' as 'desc'
+                };
+                if (searchTerm) params.search = searchTerm;
+                if (selectedCondition) params.condition = selectedCondition;
+                if (selectedSellerType) params.sellerType = selectedSellerType;
+                if (priceRange.min) params.minPrice = parseFloat(priceRange.min);
+                if (priceRange.max) params.maxPrice = parseFloat(priceRange.max);
+                
+                const response = await apiClient.getProductsByCategory('secondhand', params);
                 
                 setItems(prevItems => page === 1 ? response.products : [...prevItems, ...response.products]);
                 
@@ -212,13 +258,19 @@ export const App = () => {
             }
         };
         loadItems();
-    }, [page]);
+    }, [page, priceRange, searchTerm, sortBy, selectedCondition, selectedSellerType]);
 
     const loadMoreItems = () => {
         if (!loading && hasMore) {
             setPage(prevPage => prevPage + 1);
         }
-    }
+    };
+
+    const handlePriceRangeChange = (field, value) => {
+        setPriceRange(prev => ({ ...prev, [field]: value }));
+        setPage(1);
+        setHasMore(true);
+    };
 
 
 
@@ -255,6 +307,12 @@ export const App = () => {
                                 <input
                                     type="text"
                                     placeholder={t('common.search')}
+                                    value={searchTerm}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        setPage(1);
+                                        setHasMore(true);
+                                    }}
                                     className="pl-10 pr-4 py-3 w-full rounded-full border border-gray-300 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                                 />
                             </div>
@@ -295,14 +353,30 @@ export const App = () => {
                                 {t('common.filter')}
                             </h3>
                             <div className="space-y-6">
-                                <SearchFilters category="secondhand" />
+                                <SearchFilters 
+                                    category="secondhand" 
+                                    priceRange={priceRange}
+                                    onPriceRangeChange={handlePriceRangeChange}
+                                    priceRangeLimits={priceRangeLimits}
+                                />
                                 <div className="pt-6 border-t">
                                     <h4 className="font-medium mb-3">Condition</h4>
                                     <div className="space-y-2">
-                                        {['Like New', 'Excellent', 'Good', 'Fair'].map((condition) => (
-                                            <label key={condition} className="flex items-center space-x-2 cursor-pointer">
-                                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
-                                                <span className="text-sm text-gray-600">{condition}</span>
+                                        {[{value: '', label: 'All Conditions'}, {value: 'new', label: 'Like New'}, {value: 'like-new', label: 'Excellent'}, {value: 'good', label: 'Good'}, {value: 'fair', label: 'Fair'}].map((condition) => (
+                                            <label key={condition.value} className="flex items-center space-x-2 cursor-pointer">
+                                                <input 
+                                                    type="radio" 
+                                                    name="condition"
+                                                    value={condition.value}
+                                                    checked={selectedCondition === condition.value}
+                                                    onChange={(e) => {
+                                                        setSelectedCondition(e.target.value);
+                                                        setPage(1);
+                                                        setHasMore(true);
+                                                    }}
+                                                    className="h-4 w-4 border-gray-300 text-green-600 focus:ring-green-500" 
+                                                />
+                                                <span className="text-sm text-gray-600">{condition.label}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -310,10 +384,21 @@ export const App = () => {
                                 <div className="pt-6 border-t">
                                     <h4 className="font-medium mb-3">Seller Type</h4>
                                     <div className="space-y-2">
-                                        {['Verified Seller', 'Individual', 'Store'].map((type) => (
-                                            <label key={type} className="flex items-center space-x-2 cursor-pointer">
-                                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
-                                                <span className="text-sm text-gray-600">{type}</span>
+                                        {[{value: '', label: 'All Sellers'}, {value: 'verified', label: 'Verified Seller'}, {value: 'individual', label: 'Individual'}, {value: 'store', label: 'Store'}].map((type) => (
+                                            <label key={type.value} className="flex items-center space-x-2 cursor-pointer">
+                                                <input 
+                                                    type="radio" 
+                                                    name="sellerType"
+                                                    value={type.value}
+                                                    checked={selectedSellerType === type.value}
+                                                    onChange={(e) => {
+                                                        setSelectedSellerType(e.target.value);
+                                                        setPage(1);
+                                                        setHasMore(true);
+                                                    }}
+                                                    className="h-4 w-4 border-gray-300 text-green-600 focus:ring-green-500" 
+                                                />
+                                                <span className="text-sm text-gray-600">{type.label}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -330,7 +415,11 @@ export const App = () => {
                                 Showing <span className="font-bold text-green-600">{items.length}</span> second-hand items
                             </div>
                             <div className="flex items-center gap-4">
-                                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <select value={sortBy} onChange={(e) => {
+                                    setSortBy(e.target.value);
+                                    setPage(1);
+                                    setHasMore(true);
+                                }} className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                                     {sortOptions.map((option) => ( <option key={option.value} value={option.value}>{option.label}</option>))}
                                 </select>
                                 <div className="flex rounded-lg border border-gray-300 overflow-hidden">

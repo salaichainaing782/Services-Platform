@@ -4,6 +4,7 @@ import { ArrowLeft, Heart, Share, MessageCircle, User, Send, ThumbsUp, MapPin, C
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/api';
+import RatingComponent from '../components/RatingComponent';
 
 const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +40,15 @@ const JobDetailPage: React.FC = () => {
       setLoading(true);
       const jobData = await apiClient.getProductById(id!);
       setJob(jobData);
-      setIsLiked(jobData.isLiked || false);
+      setIsLiked(jobData.isLiked || (user?.id && jobData.likes?.includes(user.id)) || false);
+      
+      // Increment view count
+      try {
+        await apiClient.incrementProductViews(id!);
+        setJob(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
+      } catch (e) {
+        console.error('Failed to increment view count:', e);
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to load job');
     } finally {
@@ -80,7 +89,14 @@ const JobDetailPage: React.FC = () => {
     }
     try {
       const result = await apiClient.likeProduct(id!);
-      setJob(prev => ({ ...prev, likesCount: result.likes, isLiked: result.isLiked }));
+      setJob(prev => ({ 
+        ...prev, 
+        likesCount: result.likes, 
+        isLiked: result.isLiked,
+        likes: result.isLiked 
+          ? [...(prev.likes || []), user?.id] 
+          : (prev.likes || []).filter(likeId => likeId !== user?.id)
+      }));
       setIsLiked(result.isLiked);
     } catch (error) {
       console.error('Failed to like job:', error);
@@ -326,6 +342,19 @@ const JobDetailPage: React.FC = () => {
                 <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-line">
                   {job.description}
                 </p>
+              </div>
+
+              {/* Rating Section */}
+              <div className="mt-8 border-t pt-8">
+                <h3 className="text-2xl font-semibold mb-6 text-gray-900">Company Reviews</h3>
+                <RatingComponent 
+                  productId={job._id || job.id}
+                  currentRating={job.rating || 0}
+                  totalReviews={job.totalReviews || 0}
+                  onRatingUpdate={(rating, totalReviews) => {
+                    setJob(prev => prev ? { ...prev, rating, totalReviews } : null);
+                  }}
+                />
               </div>
             </div>
 

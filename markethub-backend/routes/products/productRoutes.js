@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../../controllers/products/productController');
+const Product = require('../../models/products/productModel');
 const auth = require('../../middleware/auth');
 const optionalAuth = require('../../middleware/optionalAuth');
 
@@ -9,10 +10,13 @@ const optionalAuth = require('../../middleware/optionalAuth');
 router.get('/', productController.getAllProducts);
 router.get('/featured', productController.getFeaturedProducts);
 router.get('/category/:category', optionalAuth, productController.getProductsByCategory);
-router.get('/:id', productController.getProductById);
+router.get('/:id', optionalAuth, productController.getProductById);
 
 // Increment views for a product
 router.post('/:id/views', productController.incrementProductViews);
+
+// Get price range for category
+router.get('/range/:category', productController.getPriceRange);
 
 // Purchase product (decrement quantity)
 router.post('/:id/purchase', auth, async (req, res) => {

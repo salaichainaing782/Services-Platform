@@ -113,6 +113,7 @@ const MarketplacePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [priceRangeLimits, setPriceRangeLimits] = useState({ minPrice: 0, maxPrice: 0 });
   
   // State for Gemini AI Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,7 +123,7 @@ const MarketplacePage = () => {
 
 
 
-  // Fetch categories for filter
+  // Fetch categories and price range for filter
   useEffect(() => {
     const fetchCategories = async () => {
         try {
@@ -132,7 +133,16 @@ const MarketplacePage = () => {
             console.error("Failed to fetch categories:", e);
         }
     };
+    const fetchPriceRange = async () => {
+        try {
+            const priceData = await apiClient.getPriceRange('marketplace');
+            setPriceRangeLimits(priceData);
+        } catch (e) {
+            console.error("Failed to fetch price range:", e);
+        }
+    };
     fetchCategories();
+    fetchPriceRange();
   }, []);
 
   useEffect(() => {
@@ -215,10 +225,7 @@ const MarketplacePage = () => {
     setHasMore(true);
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    resetPagination();
-  };
+
 
   const handleCategoryChange = (categoryId: string, checked: boolean) => {
     setSelectedCategories(prev => 
@@ -273,7 +280,10 @@ const MarketplacePage = () => {
           <div className="mt-8 max-w-xl mx-auto animate-fade-in-up" style={{ animationDelay: '800ms', opacity: 0 }}>
             <div className="relative">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input type="text" placeholder={t('common.search')} value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="w-full pl-14 pr-4 py-4 rounded-full border-2 border-transparent bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
+              <input type="text" placeholder={t('common.search')} value={searchQuery} onChange={(e) => {
+                setSearchQuery(e.target.value);
+                resetPagination();
+              }} className="w-full pl-14 pr-4 py-4 rounded-full border-2 border-transparent bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
             </div>
           </div>
         </div>
@@ -288,10 +298,17 @@ const MarketplacePage = () => {
                        <div className="space-y-6">
                             <div>
                                 <h4 className="font-semibold mb-3 text-gray-800">{t('marketplace.priceRange')}</h4>
-                                <div className="flex items-center space-x-2">
-                                    <input type="number" placeholder="$ Min" value={priceRange.min} onChange={(e) => handlePriceRangeChange('min', e.target.value)} className="w-full p-2 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
-                                    <span className="text-gray-500">-</span>
-                                    <input type="number" placeholder="$ Max" value={priceRange.max} onChange={(e) => handlePriceRangeChange('max', e.target.value)} className="w-full p-2 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
+                                <div className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <input type="number" placeholder="$ Min" value={priceRange.min} onChange={(e) => handlePriceRangeChange('min', e.target.value)} className="w-full p-2 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
+                                        <span className="text-gray-500">-</span>
+                                        <input type="number" placeholder="$ Max" value={priceRange.max} onChange={(e) => handlePriceRangeChange('max', e.target.value)} className="w-full p-2 text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
+                                    </div>
+                                    {priceRangeLimits.maxPrice > 0 && (
+                                        <p className="text-xs text-gray-500">
+                                            Range: ${priceRangeLimits.minPrice} - ${priceRangeLimits.maxPrice}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className="border-t pt-6">
@@ -299,7 +316,12 @@ const MarketplacePage = () => {
                                 <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                                     {categories.map(cat => (
                                         <label key={cat.id} className="flex items-center space-x-3 cursor-pointer p-1 rounded-md hover:bg-indigo-50">
-                                            <input type="checkbox" checked={selectedCategories.includes(cat.id)} onChange={(e) => handleCategoryChange(cat.id, e.target.checked)} className="custom-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 transition duration-150 ease-in-out"/>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedCategories.includes(cat.id)} 
+                                                onChange={(e) => handleCategoryChange(cat.id, e.target.checked)} 
+                                                className="custom-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 transition duration-150 ease-in-out"
+                                            />
                                             <span className="text-gray-700 capitalize">{cat.title}</span>
                                         </label>
                                     ))}
@@ -350,6 +372,7 @@ const MarketplacePage = () => {
                                     location={item.location}
                                     rating={item.rating}
                                     image={item.image}
+                                    images={item.images || (item.image ? [item.image] : [])}
                                     category={item.category}
                                     featured={item.featured}
                                     views={item.views}

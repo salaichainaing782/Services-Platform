@@ -24,7 +24,7 @@ const PostAdPage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [image, setImage] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [location, setLocation] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
 
@@ -59,7 +59,7 @@ const PostAdPage: React.FC = () => {
     setTitle('');
     setDescription('');
     setPrice('');
-    setImage('');
+    setImages([]);
     setLocation('');
     setQuantity(1);
     setCondition('good');
@@ -87,7 +87,7 @@ const PostAdPage: React.FC = () => {
       return;
     }
 
-    if (!title || !description || (category !== 'jobs' && category !== 'services' && !price) || !image || !category) {
+    if (!title || !description || (category !== 'jobs' && category !== 'services' && !price) || (category !== 'jobs' && images.length === 0) || !category) {
       warning(t('postAd.missingFields'), t('postAd.fillAllRequired'));
       return;
     }
@@ -95,11 +95,16 @@ const PostAdPage: React.FC = () => {
     const payload: any = {
       title,
       description,
-      image,
       category,
       location,
       quantity,
     };
+
+    // Only add images for non-job categories
+    if (category !== 'jobs') {
+      payload.images = images;
+      payload.image = images[0]; // Keep backward compatibility
+    }
 
     if (category !== 'jobs' && category !== 'services') {
       payload.price = price;
@@ -288,13 +293,15 @@ const PostAdPage: React.FC = () => {
                 </div>
               </div>
               
-              <div className="md:col-span-2">
-                <Label className="text-gray-700 mb-2 block font-medium">
-                  <ImageIcon className="inline-block w-4 h-4 mr-2" />
-                  {t('postAd.productImageLabel')} *
-                </Label>
-                <ImageUpload onImageChange={setImage} currentImage={image} />
-              </div>
+              {category !== 'jobs' && (
+                <div className="md:col-span-2">
+                  <Label className="text-gray-700 mb-2 block font-medium">
+                    <ImageIcon className="inline-block w-4 h-4 mr-2" />
+                    {t('postAd.productImageLabel')} * (Max 4 images)
+                  </Label>
+                  <ImageUpload onImagesChange={setImages} currentImages={images} maxImages={4} />
+                </div>
+              )}
             </div>
             
             <div className="flex justify-between pt-6">

@@ -26,8 +26,13 @@ const productSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    required: true
+    required: function() {
+      return this.category !== 'jobs';
+    }
   },
+  images: [{
+    type: String
+  }],
   location: {
     type: String,
     trim: true
@@ -67,6 +72,10 @@ const productSchema = new mongoose.Schema({
     default: 0,
     min: 0,
     max: 5
+  },
+  totalReviews: {
+    type: Number,
+    default: 0
   },
   // Job-specific fields
   jobType: {

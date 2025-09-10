@@ -1,10 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, Star, MapPin, Eye } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+
+const ImageSlider: React.FC<{ images: string[], title: string }> = ({ images, title }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  useEffect(() => {
+    if (images.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % images.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [images.length]);
+  
+  if (images.length === 1) {
+    return (
+      <img 
+        src={images[0]} 
+        alt={title}
+        className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        onError={(e) => { 
+          const target = e.target as HTMLImageElement;
+          target.onerror = null; 
+          target.src='https://placehold.co/400x400/cccccc/ffffff?text=Image+Not+Found'; 
+        }}
+      />
+    );
+  }
+  
+  return (
+    <div className="relative h-40">
+      <img 
+        src={images[currentIndex]} 
+        alt={`${title} ${currentIndex + 1}`}
+        className="h-40 w-full object-cover transition-all duration-500 group-hover:scale-105"
+        onError={(e) => { 
+          const target = e.target as HTMLImageElement;
+          target.onerror = null; 
+          target.src='https://placehold.co/400x400/cccccc/ffffff?text=Image+Not+Found'; 
+        }}
+      />
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+        {images.map((_, index) => (
+          <div
+            key={index}
+            className={`w-2 h-2 rounded-full transition-all ${
+              currentIndex === index ? 'bg-white' : 'bg-white/50'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 interface ProductCardProps {
   id: string;
@@ -13,6 +66,7 @@ interface ProductCardProps {
   location?: string;
   rating?: number;
   image: string;
+  images?: string[];
   category: 'marketplace' | 'secondhand' | 'jobs' | 'services' | 'travel';
   featured?: boolean;
   className?: string;
@@ -28,6 +82,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   location,
   rating,
   image,
+  images,
   category,
   featured = false,
   className,
@@ -149,16 +204,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       </div>
 
       <div className="relative">
-        <img 
-          src={image} 
-          alt={title}
-          className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => { 
-            const target = e.target as HTMLImageElement;
-            target.onerror = null; 
-            target.src='https://placehold.co/400x400/cccccc/ffffff?text=Image+Not+Found'; 
-          }}
-        />
+        {category === 'jobs' && !image && (!images || images.length === 0) ? (
+          <div className="h-40 w-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-4xl mb-2">💼</div>
+              <div className="text-sm text-purple-600 font-medium">Job Opportunity</div>
+            </div>
+          </div>
+        ) : (
+          <ImageSlider 
+            images={images && Array.isArray(images) ? images : (image ? [image] : ['https://placehold.co/400x400/cccccc/ffffff?text=No+Image'])}
+            title={title}
+          />
+        )}
         <div className="absolute top-2 left-2">
           <span className={cn('text-white text-xs font-bold px-2 py-1 rounded', getCategoryColor())}>
             {getCategoryLabel()}

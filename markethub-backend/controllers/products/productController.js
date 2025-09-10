@@ -149,7 +149,71 @@ const getProductsByCategory = async (req, res) => {
       sort = { [req.query.sortBy]: sortOrder };
     }
 
-    const products = await Product.find({ category, quantity: { $gt: 0 } })
+    // Build query object
+    let query = { category, quantity: { $gt: 0 } };
+
+    // Search functionality
+    if (req.query.search) {
+      query.$or = [
+        { title: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } },
+        { tags: { $in: [new RegExp(req.query.search, 'i')] } }
+      ];
+    }
+
+    // Price range filter (exclude jobs and services)
+    if ((req.query.minPrice || req.query.maxPrice) && category !== 'jobs' && category !== 'services') {
+      query.price = {};
+      if (req.query.minPrice) {
+        query.price.$gte = parseFloat(req.query.minPrice);
+      }
+      if (req.query.maxPrice) {
+        query.price.$lte = parseFloat(req.query.maxPrice);
+      }
+    }
+
+    // Location filter
+    if (req.query.location) {
+      query.location = { $regex: req.query.location, $options: 'i' };
+    }
+
+    // Condition filter (for secondhand)
+    if (req.query.condition && category === 'secondhand') {
+      query.condition = req.query.condition;
+    }
+
+    // Seller type filter (for secondhand)
+    if (req.query.sellerType && category === 'secondhand') {
+      if (req.query.sellerType === 'verified') {
+        query['seller.isVerified'] = true;
+      } else if (req.query.sellerType === 'individual') {
+        query['seller.role'] = 'user';
+      } else if (req.query.sellerType === 'store') {
+        query['seller.role'] = 'seller';
+      }
+    }
+
+    // Job type filter
+    if (req.query.jobType && category === 'jobs') {
+      query.jobType = req.query.jobType;
+    }
+
+    // Experience filter
+    if (req.query.experience && category === 'jobs') {
+      query.experience = req.query.experience;
+    }
+
+    // Service type filter
+    if (req.query.serviceType && category === 'services') {
+      query.serviceType = req.query.serviceType;
+    }
+
+    // Trip type filter
+    if (req.query.tripType && category === 'travel') {
+      query.tripType = req.query.tripType;
+    }
+
+    const products = await Product.find(query)
       .populate('seller', 'username firstName lastName avatar rating')
       .skip(skip)
       .limit(limit)
@@ -167,7 +231,7 @@ const getProductsByCategory = async (req, res) => {
       };
     }));
 
-    const total = await Product.countDocuments({ category, quantity: { $gt: 0 } });
+    const total = await Product.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
     res.json({
@@ -188,6 +252,7 @@ const getProductsByCategory = async (req, res) => {
 // Get product by ID
 const getProductById = async (req, res) => {
   try {
+    const userId = req.user?.id; // Get user ID if authenticated
     const product = await Product.findById(req.params.id)
       .populate('seller', 'username firstName lastName avatar rating')
       .lean();
@@ -196,10 +261,14 @@ const getProductById = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Add id field for frontend compatibility
+    // Add id field, like status, and rating info for frontend compatibility
     const productWithId = {
       ...product,
-      id: product._id.toString()
+      id: product._id.toString(),
+      isLiked: userId && product.likes ? product.likes.some(likeId => likeId.toString() === userId) : false,
+      likesCount: product.likes ? product.likes.length : 0,
+      rating: product.rating || 0,
+      totalReviews: product.totalReviews || 0
     };
 
     res.json(productWithId);
@@ -342,6 +411,41 @@ const incrementProductViews = async (req, res) => {
   }
 };
 
+// Get price range for category
+const getPriceRange = async (req, res) => {
+  try {
+    const { category } = req.params;
+    
+    // Only get price range for categories that have prices
+    if (category === 'jobs' || category === 'services') {
+      return res.json({ minPrice: 0, maxPrice: 0 });
+    }
+
+    const result = await Product.aggregate([
+      { $match: { category, quantity: { $gt: 0 }, price: { $exists: true, $ne: null } } },
+      {
+        $group: {
+          _id: null,
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' }
+        }
+      }
+    ]);
+
+    if (result.length === 0) {
+      return res.json({ minPrice: 0, maxPrice: 0 });
+    }
+
+    res.json({
+      minPrice: Math.floor(result[0].minPrice || 0),
+      maxPrice: Math.ceil(result[0].maxPrice || 0)
+    });
+  } catch (error) {
+    console.error('Error getting price range:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getAllProducts,
   getFeaturedProducts,
@@ -350,5 +454,6 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
-  incrementProductViews
+  incrementProductViews,
+  getPriceRange
 };

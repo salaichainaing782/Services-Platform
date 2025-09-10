@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import RatingComponent from '../components/RatingComponent';
 
 // Notification Component
 const Notification = ({ 
@@ -424,6 +425,18 @@ const ProductDetailPage: React.FC = () => {
 
               {/* Description */}
               <p className="text-gray-700 mb-6">{product.description}</p>
+
+              {/* Rating Section */}
+              <div className="border-t pt-6 mb-6">
+                <RatingComponent 
+                  productId={product._id || product.id}
+                  currentRating={product.rating || 0}
+                  totalReviews={product.totalReviews || 0}
+                  onRatingUpdate={(rating, totalReviews) => {
+                    setProduct(prev => prev ? { ...prev, rating, totalReviews } : null);
+                  }}
+                />
+              </div>
 
               {/* Quantity */}
               <div className="flex items-center space-x-6 mb-6">
