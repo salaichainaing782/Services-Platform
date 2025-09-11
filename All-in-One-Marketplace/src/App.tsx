@@ -4,26 +4,35 @@ import { useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Header from './components/Header';
-import HomePage from './pages/HomePage';
-import MarketplacePage from './pages/MarketplacePage';
-import SecondhandPage from './pages/SecondhandPage';
-import JobsPage from './pages/JobsPage';
-import TravelPage from './pages/TravelPage';
-import ServicesPage from './pages/ServicesPage';
+import MobileNav from './components/MobileNav';
+import { lazy, Suspense } from 'react';
 
-import TravelDetailPage from './pages/TravelDetailPage';
-import JobDetailPage from './pages/JobDetailPage';
-import LoginPage from './pages/LoginPage';
-import SignUpPage from './pages/SignUpPage';
-import DashboardPage from './pages/DashboardPage';
-import PostAdPage from './pages/PostAdPage';
-import ProductDetailPage from './pages/ProductDetailPage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import OrderSuccessPage from './pages/OrderSuccessPage';
-import OrderHistoryPage from './pages/OrderHistoryPage';
-import SellerDashboard from './pages/SellerDashboard';
-import AdminDashboard from './pages/AdminDashboard';
+// Lazy load pages for code splitting
+const HomePage = lazy(() => import('./pages/HomePage'));
+const MarketplacePage = lazy(() => import('./pages/MarketplacePage'));
+const SecondhandPage = lazy(() => import('./pages/SecondhandPage'));
+const JobsPage = lazy(() => import('./pages/JobsPage'));
+const TravelPage = lazy(() => import('./pages/TravelPage'));
+const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const TravelDetailPage = lazy(() => import('./pages/TravelDetailPage'));
+const JobDetailPage = lazy(() => import('./pages/JobDetailPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignUpPage = lazy(() => import('./pages/SignUpPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const PostAdPage = lazy(() => import('./pages/PostAdPage'));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
+const CartPage = lazy(() => import('./pages/CartPage'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const OrderSuccessPage = lazy(() => import('./pages/OrderSuccessPage'));
+const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage'));
+const SellerDashboard = lazy(() => import('./pages/SellerDashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+
+const LoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 function App() {
   const { isAuthenticated, isLoading, setNavigationCallback } = useAuth();
@@ -78,9 +87,10 @@ function App() {
     <NotificationProvider>
       <CartProvider>
         <Router>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background pb-16 md:pb-0">
           <Header isAuthenticated={isAuthenticated} user={null} />
         <main>
+          <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<HomePage />} />
@@ -123,7 +133,10 @@ function App() {
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </main>
+        
+        <MobileNav />
         
         {/* Footer */}
         <footer className="bg-muted/30 border-t">

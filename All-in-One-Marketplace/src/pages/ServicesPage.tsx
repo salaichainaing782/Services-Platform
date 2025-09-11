@@ -112,6 +112,76 @@ interface Comment {
   isLiked?: boolean;
 }
 
+const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: () => void }> = ({ 
+  isOpen, 
+  onClose, 
+  onLogin 
+}) => {
+  const navigate = useNavigate();
+  
+  if (!isOpen) return null;
+  
+  const handleLogin = () => {
+    onClose();
+    navigate('/login');
+  };
+  
+  const handleSignup = () => {
+    onClose();
+    navigate('/signup');
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b">
+          <h3 className="text-xl font-bold text-gray-900">Login Required</h3>
+          <button 
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-6 h-6 text-gray-500" />
+          </button>
+        </div>
+        
+        <div className="p-6">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-blue-600" />
+            </div>
+            <h4 className="text-lg font-semibold text-gray-900 mb-2">
+              Join the Community
+            </h4>
+            <p className="text-gray-600">
+              Please login or sign up to like, comment, and interact with services.
+            </p>
+          </div>
+          
+          <div className="space-y-3">
+            <Button
+              onClick={handleLogin}
+              className="w-full bg-blue-600 hover:bg-blue-700 py-3 text-white font-medium rounded-xl"
+            >
+              Login to Your Account
+            </Button>
+            
+            <Button
+              onClick={handleSignup}
+              className="w-full bg-white hover:bg-gray-50 py-3 text-blue-600 font-medium border border-gray-300 rounded-xl"
+            >
+              Create New Account
+            </Button>
+          </div>
+          
+          <p className="text-center text-sm text-gray-500 mt-6">
+            By joining, you agree to our Terms of Service and Privacy Policy
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ServicesPage: React.FC = () => {
   const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
@@ -127,6 +197,7 @@ const ServicesPage: React.FC = () => {
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
 const serviceTypes = [
   { value: '', label: 'All Services', icon: <Zap className="w-4 h-4" /> },
@@ -199,6 +270,11 @@ const serviceTypes = [
   };
 
   const fetchComments = async (productId: string) => {
+    if (!isAuthenticated) {
+      setLoginModalOpen(true);
+      return;
+    }
+    
     try {
       const commentsData = await apiClient.getComments(productId);
       setCommentModal(prev => ({
@@ -220,7 +296,7 @@ const serviceTypes = [
 
   const handleAddComment = async () => {
     if (!isAuthenticated) {
-      alert('Please login to comment');
+      setLoginModalOpen(true);
       return;
     }
     
@@ -245,7 +321,12 @@ const serviceTypes = [
   };
 
   const handleReplySubmit = async (parentId: string) => {
-    if (!isAuthenticated || !replyText[parentId]?.trim()) return;
+    if (!isAuthenticated) {
+      setLoginModalOpen(true);
+      return;
+    }
+    
+    if (!replyText[parentId]?.trim()) return;
     try {
       const newReply = await apiClient.addComment(commentModal.productId, replyText[parentId].trim(), parentId);
       setCommentModal(prev => ({
@@ -264,7 +345,11 @@ const serviceTypes = [
   };
 
   const handleCommentLike = async (commentId: string) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      setLoginModalOpen(true);
+      return;
+    }
+    
     try {
       const result = await apiClient.likeComment(commentId);
       setCommentModal(prev => ({
@@ -322,9 +407,10 @@ const serviceTypes = [
   const handleLike = async (productId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent navigation when clicking like button
     if (!isAuthenticated) {
-      alert('Please login to like services');
+      setLoginModalOpen(true);
       return;
     }
+    
     try {
       const result = await apiClient.likeProduct(productId);
       setProducts(prev => prev.map(product => 
@@ -362,6 +448,11 @@ const serviceTypes = [
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
+      <LoginModal 
+        isOpen={loginModalOpen} 
+        onClose={() => setLoginModalOpen(false)}
+        onLogin={() => navigate('/login')}
+      />
 
       {commentModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

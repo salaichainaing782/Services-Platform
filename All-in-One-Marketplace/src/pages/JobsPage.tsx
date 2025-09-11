@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Search, Filter, X, ArrowRight, SearchIcon, Heart } from 'lucide-react';
+import { Search, Filter, X, ArrowRight, SearchIcon, Heart, LogIn, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, Link } from 'react-router-dom';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 // --- Data Constants ---
-// Data တွေကို component အပြင်ဘက်၊ file တစ်ခုတည်းမှာပဲ ထားလိုက်ပါတယ်
 const JOB_TYPES = [
   { value: 'all', label: 'All Types' },
   { value: 'full-time', label: 'Full-time' },
@@ -24,9 +24,74 @@ const EXPERIENCE_LEVELS = [
   { value: 'executive', label: 'Executive' }
 ];
 
+// --- Login Modal Component ---
+const LoginModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const navigate = useNavigate();
+  
+  if (!isOpen) return null;
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+        className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative"
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          <X className="h-6 w-6" />
+        </button>
+        
+        <div className="text-center mb-6">
+          <div className="mx-auto w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+            <LogIn className="h-8 w-8 text-indigo-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Login Required</h2>
+          <p className="text-slate-600">Please login to access this feature</p>
+        </div>
+        
+        <div className="space-y-4">
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors"
+          >
+            <LogIn className="h-5 w-5" />
+            Sign In
+          </button>
+          
+          <button
+            onClick={() => navigate('/register')}
+            className="w-full border border-slate-200 text-slate-700 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+          >
+            <UserPlus className="h-5 w-5" />
+            Create Account
+          </button>
+        </div>
+        
+        <p className="text-center text-sm text-slate-500 mt-6">
+          Don't have an account?{' '}
+          <button
+            onClick={() => navigate('/register')}
+            className="text-indigo-600 font-medium hover:underline"
+          >
+            Sign up now
+          </button>
+        </p>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 // --- Helper & Sub-Components ---
-
 const JobCardSkeleton: React.FC = () => (
   <div className="bg-white p-6 rounded-2xl border border-slate-100 animate-pulse">
     <div className="flex gap-4">
@@ -127,7 +192,7 @@ const FilterSidebar: React.FC<any> = ({
   );
 };
 
-const JobCard = ({ job }: { job: any }) => {
+const JobCard = ({ job, onLoginRequired }: { job: any; onLoginRequired: () => void }) => {
   const { isAuthenticated } = useAuth();
   const [isLiked, setIsLiked] = useState(job.isLiked || false);
   const [likesCount, setLikesCount] = useState(job.likes?.length || job.likesCount || job.favorites || 0);
@@ -136,7 +201,7 @@ const JobCard = ({ job }: { job: any }) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) {
-      alert('Please login to like jobs');
+      onLoginRequired();
       return;
     }
     try {
@@ -145,6 +210,13 @@ const JobCard = ({ job }: { job: any }) => {
       setLikesCount(result.likes);
     } catch (error) {
       console.error('Failed to like job:', error);
+    }
+  };
+
+  const handleViewDetails = (e: React.MouseEvent) => {
+    if (!isAuthenticated) {
+      e.preventDefault();
+      onLoginRequired();
     }
   };
 
@@ -157,91 +229,92 @@ const JobCard = ({ job }: { job: any }) => {
   };
 
   return (
-<motion.div
-  layout
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  exit={{ opacity: 0, y: -20 }}
-  transition={{ duration: 0.25 }}
-  whileHover={{ y: -3, scale: 1.01 }}
-  className="bg-white rounded-xl border border-slate-200 shadow-sm 
-             hover:shadow-lg hover:border-indigo-200 transition-all duration-200"
->
-  <a href={`/jobs/${job._id}`} className="block p-6">
-    {/* Header: Avatar + Title */}
-    <div className="flex gap-4">
-      <div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center font-semibold text-slate-600">
-        {job.seller?.avatar ? (
-          <img
-            src={job.seller.avatar}
-            alt={job.seller.firstName || job.seller.username}
-            className="w-full h-full object-cover rounded-lg"
-          />
-        ) : (
-          <span>{job.seller?.firstName?.charAt(0) || job.seller?.username?.charAt(0) || '?'}</span>
-        )}
-      </div>
-      <div className="flex-1">
-        <div className="flex justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600">
-              {job.title}
-            </h3>
-            <p className="text-sm text-slate-500 mt-1">
-              {job.seller?.firstName || job.seller?.username || 'Unknown'} · {job.location || 'Remote'}
-            </p>
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.25 }}
+      whileHover={{ y: -3, scale: 1.01 }}
+      className="bg-white rounded-xl border border-slate-200 shadow-sm 
+                 hover:shadow-lg hover:border-indigo-200 transition-all duration-200"
+    >
+      <div className="p-6">
+        {/* Header: Avatar + Title */}
+        <div className="flex gap-4">
+          <div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center font-semibold text-slate-600">
+            {job.seller?.avatar ? (
+              <img
+                src={job.seller.avatar}
+                alt={job.seller.firstName || job.seller.username}
+                className="w-full h-full object-cover rounded-lg"
+              />
+            ) : (
+              <span>{job.seller?.firstName?.charAt(0) || job.seller?.username?.charAt(0) || '?'}</span>
+            )}
           </div>
-          <motion.button
-            whileTap={{ scale: 1.2 }}
-            onClick={handleLikeJob}
-            className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500 transition"
+          <div className="flex-1">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600">
+                  {job.title}
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  {job.seller?.firstName || job.seller?.username || 'Unknown'} · {job.location || 'Remote'}
+                </p>
+              </div>
+              <motion.button
+                whileTap={{ scale: 1.2 }}
+                onClick={handleLikeJob}
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500 transition"
+              >
+                <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+              </motion.button>
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-slate-600 text-sm mt-4 line-clamp-2">
+          {job.description || 'No description provided.'}
+        </p>
+
+        {/* Tags */}
+        <div className="flex gap-2 mt-3">
+          {job.jobType && (
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+              {job.jobType}
+            </span>
+          )}
+          {job.experience && (
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+              {job.experience}
+            </span>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-center pt-4 mt-4 border-t border-slate-100">
+          <p className="text-lg font-semibold text-indigo-600">
+            ${job.salary?.toLocaleString() || 'N/A'}
+            <span className="text-sm text-slate-500 ml-1">
+              {job.salaryType === 'annual' ? '/year' : job.salaryType === 'monthly' ? '/month' : ''}
+            </span>
+          </p>
+          <Link 
+            to={isAuthenticated ? `/jobs/${job._id}` : '#'} 
+            onClick={handleViewDetails}
+            className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
           >
-            <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-          </motion.button>
+            View Details →
+          </Link>
         </div>
       </div>
-    </div>
-
-    {/* Description */}
-    <p className="text-slate-600 text-sm mt-4 line-clamp-2">
-      {job.description || 'No description provided.'}
-    </p>
-
-    {/* Tags */}
-    <div className="flex gap-2 mt-3">
-      {job.jobType && (
-        <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-          {job.jobType}
-        </span>
-      )}
-      {job.experience && (
-        <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-          {job.experience}
-        </span>
-      )}
-    </div>
-
-    {/* Footer */}
-    <div className="flex justify-between items-center pt-4 mt-4 border-t border-slate-100">
-      <p className="text-lg font-semibold text-indigo-600">
-        ${job.salary?.toLocaleString() || 'N/A'}
-        <span className="text-sm text-slate-500 ml-1">
-          {job.salaryType === 'annual' ? '/year' : job.salaryType === 'monthly' ? '/month' : ''}
-        </span>
-      </p>
-      <button className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition">
-        View Details →
-      </button>
-    </div>
-  </a>
-</motion.div>
-
+    </motion.div>
   );
 };
 
-
 // --- Main Page Component ---
-
 const JobsPage: React.FC = () => {
   const { t } = useTranslation();
   const [items, setItems] = useState<any[]>([]);
@@ -251,6 +324,7 @@ const JobsPage: React.FC = () => {
   const [selectedJobType, setSelectedJobType] = useState('all');
   const [selectedExperience, setSelectedExperience] = useState('all');
   const [salaryRange, setSalaryRange] = useState([0, 200000]);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -288,6 +362,10 @@ const JobsPage: React.FC = () => {
     setSalaryRange([0, 200000]);
   };
 
+  const handleLoginRequired = () => {
+    setShowLoginModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       <header className="bg-gradient-to-b from-white to-slate-50 border-b border-slate-200">
@@ -315,7 +393,7 @@ const JobsPage: React.FC = () => {
           <FilterSidebar
             selectedJobType={selectedJobType}
             setSelectedJobType={setSelectedJobType}
-            selectedExperience={selectedExperience}
+            selectedExperience={setSelectedExperience}
             setSelectedExperience={setSelectedExperience}
             salaryRange={salaryRange}
             setSalaryRange={setSalaryRange}
@@ -357,7 +435,13 @@ const JobsPage: React.FC = () => {
               <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <AnimatePresence>
                   {filteredItems.length > 0 ? (
-                    filteredItems.map((job) => <JobCard key={job._id} job={job} />)
+                    filteredItems.map((job) => (
+                      <JobCard 
+                        key={job._id} 
+                        job={job} 
+                        onLoginRequired={handleLoginRequired}
+                      />
+                    ))
                   ) : (
                     <motion.div
                       initial={{ opacity: 0 }}
@@ -381,6 +465,12 @@ const JobsPage: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+      />
     </div>
   );
 };

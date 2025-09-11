@@ -1,10 +1,62 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, Share, MessageCircle, User, Send, ThumbsUp, MapPin, Clock, Star, Calendar, Users, Phone, Mail, Globe, Shield, Award, CheckCircle, ChevronRight, Image, Video, Bookmark, Flag, Eye, Download, X, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, Heart, Share, MessageCircle, User, Send, ThumbsUp, MapPin, Clock, Star, Calendar, Users, Phone, Mail, Globe, Shield, Award, CheckCircle, ChevronRight, Image, Video, Bookmark, Flag, Eye, Download, X, ChevronLeft, LogIn } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/api';
 import RatingComponent from '../components/RatingComponent';
+
+// Login Modal Component
+const LoginModal = ({ isOpen, onClose, onLogin }) => {
+  const navigate = useNavigate();
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-bold text-gray-900">Sign In Required</h3>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-gray-600 mb-4">
+            You need to be signed in to perform this action. Please log in or create an account to continue.
+          </p>
+        </div>
+        
+        <div className="flex flex-col space-y-4">
+          <button
+            onClick={() => {
+              onClose();
+              navigate('/login', { state: { from: window.location.pathname } });
+            }}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl font-medium flex items-center justify-center transition-colors"
+          >
+            <LogIn className="w-5 h-5 mr-2" />
+            Sign In
+          </button>
+          
+          <button
+            onClick={() => {
+              onClose();
+              navigate('/register', { state: { from: window.location.pathname } });
+            }}
+            className="border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 py-3 px-4 rounded-xl font-medium transition-colors"
+          >
+            Create Account
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const TravelDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +74,8 @@ const TravelDetailPage: React.FC = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginAction, setLoginAction] = useState<() => void>(() => {});
   
   const isService = product?.category === 'services';
   const isTravel = product?.category === 'travel';
@@ -84,11 +138,16 @@ const TravelDetailPage: React.FC = () => {
     return date.toLocaleDateString();
   };
 
-  const handleLike = async () => {
+  const handleAuthAction = (action: () => void) => {
     if (!isAuthenticated) {
-      alert(t('auth.loginRequired'));
-      return;
+      setLoginAction(() => action);
+      setShowLoginModal(true);
+    } else {
+      action();
     }
+  };
+
+  const handleLike = async () => {
     try {
       const result = await apiClient.likeProduct(id!);
       setProduct(prev => ({ 
@@ -106,10 +165,6 @@ const TravelDetailPage: React.FC = () => {
   };
 
   const handleBookmark = async () => {
-    if (!isAuthenticated) {
-      alert(t('auth.loginRequired'));
-      return;
-    }
     try {
       const result = await apiClient.bookmarkProduct(id!);
       setIsBookmarked(result.isBookmarked);
@@ -119,7 +174,7 @@ const TravelDetailPage: React.FC = () => {
   };
 
   const handleCommentSubmit = async () => {
-    if (!isAuthenticated || !commentText.trim()) return;
+    if (!commentText.trim()) return;
     try {
       const newComment = await apiClient.addComment(id!, commentText.trim());
       setComments(prev => [newComment, ...prev]);
@@ -131,7 +186,6 @@ const TravelDetailPage: React.FC = () => {
   };
 
   const handleCommentLike = async (commentId: string) => {
-    if (!isAuthenticated) return;
     try {
       const result = await apiClient.likeComment(commentId);
       setComments(prev => prev.map(comment => 
@@ -152,7 +206,7 @@ const TravelDetailPage: React.FC = () => {
   };
 
   const handleReplySubmit = async (parentId: string) => {
-    if (!isAuthenticated || !replyText[parentId]?.trim()) return;
+    if (!replyText[parentId]?.trim()) return;
     try {
       const newReply = await apiClient.addComment(id!, replyText[parentId].trim(), parentId);
       setComments(prev => prev.map(comment => 
@@ -247,6 +301,14 @@ const TravelDetailPage: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${isService ? 'bg-gradient-to-br from-amber-50 to-orange-50' : 'bg-gradient-to-br from-indigo-50 to-blue-50'}`}>
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+        onLogin={() => {
+          setShowLoginModal(false);
+          loginAction();
+        }}
+      />
 
       {showImageModal && (
         <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
@@ -363,7 +425,7 @@ const TravelDetailPage: React.FC = () => {
                   <div className="flex items-center mb-2">
                     <h1 className="text-4xl font-bold text-gray-900 mr-3">{product.title}</h1>
                     <button 
-                      onClick={handleBookmark}
+                      onClick={() => handleAuthAction(handleBookmark)}
                       className={`p-2 rounded-full transition-colors ${
                         isBookmarked 
                           ? (isService ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600')
@@ -406,7 +468,7 @@ const TravelDetailPage: React.FC = () => {
 
               <div className="flex items-center space-x-4 py-6 border-y">
                 <button 
-                  onClick={handleLike}
+                  onClick={() => handleAuthAction(handleLike)}
                   className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all ${
                     isLiked 
                       ? 'bg-red-100 text-red-600 shadow-red-100' 
@@ -450,6 +512,7 @@ const TravelDetailPage: React.FC = () => {
                   onRatingUpdate={(rating, totalReviews) => {
                     setProduct(prev => prev ? { ...prev, rating, totalReviews } : null);
                   }}
+                  requireAuth={() => handleAuthAction(() => {})}
                 />
               </div>
 
@@ -528,7 +591,12 @@ const TravelDetailPage: React.FC = () => {
               ) : (
                 <div className={`text-center py-6 ${isService ? 'bg-gradient-to-r from-gray-50 to-amber-50' : 'bg-gradient-to-r from-gray-50 to-blue-50'} rounded-xl mb-8 border-2 border-dashed border-gray-200`}>
                   <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 text-lg font-medium">Sign in to share your experience</p>
+                  <button 
+                    onClick={() => handleAuthAction(() => {})}
+                    className="text-indigo-600 hover:text-indigo-700 font-medium underline"
+                  >
+                    Sign in to share your experience
+                  </button>
                 </div>
               )}
               
@@ -556,7 +624,7 @@ const TravelDetailPage: React.FC = () => {
                       
                       <div className="flex items-center space-x-6">
                         <button 
-                          onClick={() => handleCommentLike(comment._id)}
+                          onClick={() => handleAuthAction(() => handleCommentLike(comment._id))}
                           className={`flex items-center space-x-2 transition-colors ${
                             comment.isLiked ? (isService ? 'text-amber-600' : 'text-blue-600') : (isService ? 'text-gray-500 hover:text-amber-600' : 'text-gray-500 hover:text-blue-600')
                           }`}
@@ -565,7 +633,7 @@ const TravelDetailPage: React.FC = () => {
                           <span className="font-medium">{comment.likes?.length || 0}</span>
                         </button>
                         <button 
-                          onClick={() => setShowReplyInput(prev => ({ ...prev, [comment._id]: !prev[comment._id] }))}
+                          onClick={() => handleAuthAction(() => setShowReplyInput(prev => ({ ...prev, [comment._id]: !prev[comment._id] })))}
                           className="text-gray-500 hover:text-gray-700 font-medium"
                         >
                           Reply
@@ -588,7 +656,7 @@ const TravelDetailPage: React.FC = () => {
                                   <p className="text-sm text-gray-700">{reply.text}</p>
                                 </div>
                                 <button 
-                                  onClick={() => handleCommentLike(reply._id)}
+                                  onClick={() => handleAuthAction(() => handleCommentLike(reply._id))}
                                   className={`flex items-center space-x-1 text-xs transition-colors ${
                                     reply.isLiked ? (isService ? 'text-amber-600' : 'text-blue-600') : (isService ? 'text-gray-500 hover:text-amber-600' : 'text-gray-500 hover:text-blue-600')
                                   }`}
@@ -723,14 +791,20 @@ const TravelDetailPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <button className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <button 
+                      onClick={() => handleAuthAction(() => {})}
+                      className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    >
                       Book Now - ${typeof product.price === 'number' ? product.price : parseFloat(product.price || '0')}
                     </button>
                   </>
                 )}
 
                 {isService && (
-                  <button className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-4 rounded-xl font-bold text-lg hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                  <button 
+                    onClick={() => handleAuthAction(() => {})}
+                    className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-4 rounded-xl font-bold text-lg hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
                     Contact Provider
                   </button>
                 )}

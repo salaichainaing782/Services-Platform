@@ -23,7 +23,7 @@ const ImageSlider: React.FC<{ images: string[], title: string }> = ({ images, ti
       <img 
         src={images[0]} 
         alt={title}
-        className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        className="h-32 sm:h-40 w-full object-cover transition-transform duration-300 group-hover:scale-105"
         onError={(e) => { 
           const target = e.target as HTMLImageElement;
           target.onerror = null; 
@@ -34,11 +34,11 @@ const ImageSlider: React.FC<{ images: string[], title: string }> = ({ images, ti
   }
   
   return (
-    <div className="relative h-40">
+    <div className="relative h-32 sm:h-40">
       <img 
         src={images[currentIndex]} 
         alt={`${title} ${currentIndex + 1}`}
-        className="h-40 w-full object-cover transition-all duration-500 group-hover:scale-105"
+        className="h-32 sm:h-40 w-full object-cover transition-all duration-500 group-hover:scale-105"
         onError={(e) => { 
           const target = e.target as HTMLImageElement;
           target.onerror = null; 
@@ -205,7 +205,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
       <div className="relative">
         {category === 'jobs' && !image && (!images || images.length === 0) ? (
-          <div className="h-40 w-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
+          <div className="h-32 sm:h-40 w-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
             <div className="text-center">
               <div className="text-4xl mb-2">💼</div>
               <div className="text-sm text-purple-600 font-medium">Job Opportunity</div>
@@ -224,22 +224,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
       </div>
 
-      <div className="p-3">
-        <h3 className="text-sm font-semibold text-gray-800 truncate mb-1" title={title}>
+      <div className="p-2 sm:p-3">
+        <h3 className="text-xs sm:text-sm font-semibold text-gray-800 truncate mb-1" title={title}>
           {title}
         </h3>
         
         {price && (
-          <p className="text-lg font-bold text-green-600 mt-1">${typeof price === 'string' ? parseFloat(price.replace('$', '') || '0').toFixed(2) : price}</p>
+          <p className="text-sm sm:text-lg font-bold text-green-600 mt-1">${typeof price === 'string' ? parseFloat(price.replace('$', '') || '0').toFixed(2) : price}</p>
         )}
         
-        <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+        <div className="flex items-center justify-between text-xs text-gray-500 mt-1 sm:mt-2">
           <div className="flex items-center">
-            <MapPin className="h-3 w-3 mr-1" />
+            <MapPin className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
             <span>{location || 'Not specified'}</span>
           </div>
           <div className="flex items-center">
-            <Star className="h-3 w-3 mr-1 text-yellow-400" fill="currentColor" />
+            <Star className="h-2 w-2 sm:h-3 sm:w-3 mr-1 text-yellow-400" fill="currentColor" />
             <span>{rating || '0.0'}</span>
           </div>
         </div>

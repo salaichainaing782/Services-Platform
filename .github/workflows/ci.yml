@@ -1,0 +1,89 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: markethub-backend/package-lock.json
+    
+    - name: Install backend dependencies
+      working-directory: ./markethub-backend
+      run: npm ci
+    
+    - name: Run backend tests
+      working-directory: ./markethub-backend
+      run: npm test
+      env:
+        NODE_ENV: test
+        MONGODB_URI: mongodb://localhost:27017/markethub_test
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: All-in-One-Marketplace/package-lock.json
+    
+    - name: Install frontend dependencies
+      working-directory: ./All-in-One-Marketplace
+      run: npm ci
+    
+    - name: Run frontend tests
+      working-directory: ./All-in-One-Marketplace
+      run: npm test
+    
+    - name: Build frontend
+      working-directory: ./All-in-One-Marketplace
+      run: npm run build
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run security audit - Backend
+      working-directory: ./markethub-backend
+      run: npm audit --audit-level moderate
+    
+    - name: Run security audit - Frontend
+      working-directory: ./All-in-One-Marketplace
+      run: npm audit --audit-level moderate
+
+  deploy:
+    needs: [test-backend, test-frontend, security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to production
+      run: echo "Deploy to production server"
+      # Add your deployment steps here
