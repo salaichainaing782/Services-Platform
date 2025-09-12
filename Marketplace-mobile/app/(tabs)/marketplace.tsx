@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiClient } from '../../services/api';
+import { router } from 'expo-router';
 
 interface Product {
   _id: string;
@@ -87,6 +88,28 @@ export default function MarketplaceScreen() {
     [products, searchQuery, selectedCategory]
   );
 
+  const handleProductPress = async (item: Product) => {
+    try {
+      // Use try-catch to prevent navigation from failing if view increment fails
+      await apiClient.incrementProductViews(item._id);
+    } catch (error) {
+      console.log('Failed to increment view count:', error);
+      // Continue with navigation even if view count fails
+    }
+    
+    if (item.category === 'services') {
+      router.push({
+        pathname: '/service-detail',
+        params: { service: JSON.stringify(item) }
+      });
+    } else {
+      router.push({
+        pathname: '/product-detail',
+        params: { product: JSON.stringify(item) }
+      });
+    }
+  };
+
   const renderCategory = useCallback(
     ({ item }: { item: Category }) => {
       const active = selectedCategory === item.id;
@@ -128,7 +151,11 @@ export default function MarketplaceScreen() {
 
   const renderProduct = useCallback(
     ({ item }: { item: Product }) => (
-      <TouchableOpacity style={styles.productCard} activeOpacity={0.9}>
+      <TouchableOpacity 
+        style={styles.productCard} 
+        activeOpacity={0.9}
+        onPress={() => handleProductPress(item)}
+      >
         {item.image ? (
           <Image
             source={{ uri: item.image }}

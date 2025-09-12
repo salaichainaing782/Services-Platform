@@ -69,6 +69,7 @@ const ratingRoutes = require('./routes/ratings');
 
 app.use('/api/products', cacheMiddleware(300), productRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/auth', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/users/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
@@ -108,6 +109,32 @@ app.get('/health', async (req, res) => {
       message: 'Service unavailable',
       timestamp: new Date().toISOString()
     });
+  }
+});
+
+// Test endpoint for view increment
+app.get('/test-views/:id', async (req, res) => {
+  try {
+    const Product = require('./models/products/productModel');
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    
+    const updatedProduct = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
+    
+    res.json({ 
+      message: 'View incremented successfully',
+      productId: req.params.id,
+      previousViews: product.views,
+      currentViews: updatedProduct.views
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error incrementing views', error: error.message });
   }
 });
 

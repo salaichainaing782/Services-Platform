@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,10 +44,12 @@ export default function ServiceDetailScreen() {
   const [replyText, setReplyText] = useState({});
   const [showReplyInput, setShowReplyInput] = useState({});
   const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [serviceRating, setServiceRating] = useState(service.rating || 0);
   const [totalReviews, setTotalReviews] = useState(service.totalReviews || 0);
+  const [reviews, setReviews] = useState([]);
 
   const serviceImages = service?.images && Array.isArray(service.images) && service.images.length > 0 
     ? service.images.slice(0, 4)
@@ -41,6 +57,7 @@ export default function ServiceDetailScreen() {
 
   useEffect(() => {
     loadComments();
+    loadRatings();
     if (serviceImages.length > 1) {
       const interval = setInterval(() => {
         setCurrentImageIndex((prev) => (prev + 1) % serviceImages.length);
@@ -49,16 +66,34 @@ export default function ServiceDetailScreen() {
     }
   }, [serviceImages.length]);
 
+  const loadRatings = async () => {
+    try {
+      if (!service?._id && !service?.id) return;
+      
+      const ratingsData = await apiClient.getProductRatings(service._id || service.id);
+      setServiceRating(ratingsData.averageRating || 0);
+      setTotalReviews(ratingsData.totalReviews || 0);
+      setReviews(ratingsData.ratings || []);
+    } catch (error) {
+      console.log('Failed to load ratings:', error.message);
+    }
+  };
+
   const loadComments = async () => {
     try {
       if (!service?._id && !service?.id) {
+        console.log('No service ID found, using empty comments');
         setComments([]);
         return;
       }
-      const commentsData = await apiClient.getComments(service._id || service.id);
-      setComments(commentsData || []);
+      
+      const serviceId = service._id || service.id;
+      console.log('Loading comments for service:', serviceId);
+      
+      const commentsData = await apiClient.getComments(serviceId);
+      setComments(Array.isArray(commentsData) ? commentsData : []);
     } catch (error) {
-      console.error('Failed to load comments:', error);
+      console.log('Comments loading failed, using empty array:', error.message);
       setComments([]);
     }
   };
@@ -90,47 +125,39 @@ export default function ServiceDetailScreen() {
 
   const handleLike = async () => {
     try {
-      // Optimistic update
-      const newIsLiked = !isLiked;
-      const newLikesCount = newIsLiked ? likesCount + 1 : likesCount - 1;
-      
-      setIsLiked(newIsLiked);
-      setLikesCount(newLikesCount);
-      
-      // Try API call in background
-      if (service?._id || service?.id) {
-        apiClient.likeProduct(service._id || service.id).catch(() => {
-          // Revert on error
-          setIsLiked(!newIsLiked);
-          setLikesCount(likesCount);
-        });
-      }
+      const result = await apiClient.likeProduct(service._id || service.id);
+      setIsLiked(result.isLiked);
+      setLikesCount(result.likes || result.likesCount || (result.isLiked ? likesCount + 1 : likesCount - 1));
     } catch (error) {
       console.error('Failed to like service:', error);
+      // Optimistic update as fallback
+      const newIsLiked = !isLiked;
+      setIsLiked(newIsLiked);
+      setLikesCount(newIsLiked ? likesCount + 1 : likesCount - 1);
     }
   };
 
   const handleBookmark = async () => {
     try {
-      // Optimistic update
-      const newIsBookmarked = !isBookmarked;
-      setIsBookmarked(newIsBookmarked);
-      
-      // Try API call in background
-      if (service?._id || service?.id) {
-        apiClient.bookmarkProduct(service._id || service.id).catch(() => {
-          // Revert on error
-          setIsBookmarked(!newIsBookmarked);
-        });
-      }
+      const result = await apiClient.bookmarkProduct(service._id || service.id);
+      setIsBookmarked(result.isBookmarked);
     } catch (error) {
       console.error('Failed to bookmark:', error);
+      // Optimistic update as fallback
+      setIsBookmarked(!isBookmarked);
     }
   };
 
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     try {
+      const newComment = await apiClient.addComment(service._id || service.id, commentText.trim());
+      setComments(prev => [newComment, ...prev]);
+      setCommentText('');
+      Keyboard.dismiss();
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      // Fallback to optimistic update
       const newComment = {
         _id: Date.now().toString(),
         text: commentText.trim(),
@@ -146,13 +173,32 @@ export default function ServiceDetailScreen() {
       };
       setComments(prev => [newComment, ...prev]);
       setCommentText('');
-    } catch (error) {
-      console.error('Failed to add comment:', error);
+      Keyboard.dismiss();
     }
   };
 
   const handleCommentLike = async (commentId) => {
     try {
+      const result = await apiClient.likeComment(commentId);
+      setComments(prev => prev.map(comment => 
+        comment._id === commentId 
+          ? { 
+              ...comment, 
+              likes: Array(result.likes).fill(null),
+              isLiked: result.isLiked
+            }
+          : {
+              ...comment,
+              replies: comment.replies?.map((reply) => 
+                reply._id === commentId 
+                  ? { ...reply, likes: Array(result.likes).fill(null), isLiked: result.isLiked }
+                  : reply
+              ) || []
+            }
+      ));
+    } catch (error) {
+      console.error('Failed to like comment:', error);
+      // Fallback to optimistic update
       setComments(prev => prev.map(comment => 
         comment._id === commentId 
           ? { 
@@ -164,14 +210,24 @@ export default function ServiceDetailScreen() {
             }
           : comment
       ));
-    } catch (error) {
-      console.error('Failed to like comment:', error);
     }
   };
 
   const handleReplySubmit = async (parentId) => {
     if (!replyText[parentId]?.trim()) return;
     try {
+      const newReply = await apiClient.addComment(service._id || service.id, replyText[parentId].trim(), parentId);
+      setComments(prev => prev.map(comment => 
+        comment._id === parentId 
+          ? { ...comment, replies: [...(comment.replies || []), newReply] }
+          : comment
+      ));
+      setReplyText(prev => ({ ...prev, [parentId]: '' }));
+      setShowReplyInput(prev => ({ ...prev, [parentId]: false }));
+      Keyboard.dismiss();
+    } catch (error) {
+      console.error('Failed to add reply:', error);
+      // Fallback to optimistic update
       const newReply = {
         _id: Date.now().toString(),
         text: replyText[parentId].trim(),
@@ -192,15 +248,25 @@ export default function ServiceDetailScreen() {
       ));
       setReplyText(prev => ({ ...prev, [parentId]: '' }));
       setShowReplyInput(prev => ({ ...prev, [parentId]: false }));
-    } catch (error) {
-      console.error('Failed to add reply:', error);
+      Keyboard.dismiss();
     }
   };
 
   const handleRatingSubmit = async () => {
     if (rating === 0) return;
     try {
-      // Simulate rating update
+      const result = await apiClient.rateProduct(service._id || service.id, rating, reviewText.trim());
+      setServiceRating(result.averageRating || result.rating);
+      setTotalReviews(result.totalReviews);
+      setUserRating(rating);
+      setShowRatingModal(false);
+      setRating(0);
+      setReviewText('');
+      Alert.alert('Success', 'Thank you for your rating!');
+      loadRatings(); // Reload ratings to show new review
+      loadComments();
+    } catch (error) {
+      console.error('Failed to submit rating:', error);
       const newTotalReviews = totalReviews + 1;
       const newRating = ((serviceRating * totalReviews) + rating) / newTotalReviews;
       
@@ -209,10 +275,9 @@ export default function ServiceDetailScreen() {
       setUserRating(rating);
       setShowRatingModal(false);
       setRating(0);
+      setReviewText('');
       Alert.alert('Success', 'Thank you for your rating!');
-    } catch (error) {
-      console.error('Failed to submit rating:', error);
-      Alert.alert('Error', 'Failed to submit rating');
+      loadRatings();
     }
   };
 
@@ -237,322 +302,370 @@ export default function ServiceDetailScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Login Modal */}
-      <Modal visible={showLoginModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Sign In Required</Text>
-            <Text style={styles.modalText}>You need to be signed in to perform this action.</Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.loginButton}
-                onPress={() => {
-                  setShowLoginModal(false);
-                  router.push('/login');
-                }}
-              >
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setShowLoginModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+          {/* Login Modal */}
+          <Modal visible={showLoginModal} transparent animationType="slide">
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Sign In Required</Text>
+                <Text style={styles.modalText}>You need to be signed in to perform this action.</Text>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={styles.loginButton}
+                    onPress={() => {
+                      setShowLoginModal(false);
+                      router.push('/login');
+                    }}
+                  >
+                    <Text style={styles.loginButtonText}>Sign In</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => setShowLoginModal(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
-      </Modal>
+          </Modal>
 
-      {/* Rating Modal */}
-      <Modal visible={showRatingModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Rate this Service</Text>
-            <Text style={styles.modalText}>How would you rate this service?</Text>
-            <View style={styles.ratingStars}>
-              {renderStars(rating, 40, setRating)}
+          {/* Rating Modal */}
+          <Modal visible={showRatingModal} transparent animationType="slide">
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Rate this Service</Text>
+                <Text style={styles.modalText}>How would you rate this service?</Text>
+                <View style={styles.ratingStars}>
+                  {renderStars(rating, 40, setRating)}
+                </View>
+                <TextInput
+                  style={styles.reviewInput}
+                  placeholder="Write a review (Optional)"
+                  placeholderTextColor="#9ca3af"
+                  value={reviewText}
+                  onChangeText={setReviewText}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.loginButton, rating === 0 && styles.loginButtonDisabled]}
+                    onPress={handleRatingSubmit}
+                    disabled={rating === 0}
+                  >
+                    <Text style={styles.loginButtonText}>Submit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setShowRatingModal(false);
+                      setRating(0);
+                      setReviewText('');
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-            <View style={styles.modalButtons}>
+          </Modal>
+
+          {/* Image Modal */}
+          <Modal visible={showImageModal} transparent animationType="fade">
+            <View style={styles.imageModalOverlay}>
               <TouchableOpacity 
-                style={[styles.loginButton, rating === 0 && styles.loginButtonDisabled]}
-                onPress={handleRatingSubmit}
-                disabled={rating === 0}
+                style={styles.closeImageButton}
+                onPress={() => setShowImageModal(false)}
               >
-                <Text style={styles.loginButtonText}>Submit</Text>
+                <Ionicons name="close" size={30} color="#fff" />
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => {
-                  setShowRatingModal(false);
-                  setRating(0);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+              <Image 
+                source={{ uri: serviceImages[currentImageIndex] }} 
+                style={styles.fullScreenImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.imageCounter}>
+                {currentImageIndex + 1} / {serviceImages.length}
+              </Text>
             </View>
-          </View>
-        </View>
-      </Modal>
+          </Modal>
 
-      {/* Image Modal */}
-      <Modal visible={showImageModal} transparent animationType="fade">
-        <View style={styles.imageModalOverlay}>
-          <TouchableOpacity 
-            style={styles.closeImageButton}
-            onPress={() => setShowImageModal(false)}
-          >
-            <Ionicons name="close" size={30} color="#fff" />
-          </TouchableOpacity>
-          <Image 
-            source={{ uri: serviceImages[currentImageIndex] }} 
-            style={styles.fullScreenImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.imageCounter}>
-            {currentImageIndex + 1} / {serviceImages.length}
-          </Text>
-        </View>
-      </Modal>
-
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Service Details</Text>
-        <TouchableOpacity 
-          onPress={() => handleAuthAction(handleBookmark)}
-          style={[styles.headerActionButton, isBookmarked && styles.bookmarked]}
-        >
-          <Ionicons name={isBookmarked ? "bookmark" : "bookmark-outline"} size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity onPress={() => setShowImageModal(true)}>
-        <Image source={{ uri: serviceImages[currentImageIndex] }} style={styles.serviceImage} />
-        <View style={styles.imageIndicators}>
-          {serviceImages.map((_, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => setCurrentImageIndex(index)}
-              style={[
-                styles.indicator,
-                currentImageIndex === index && styles.activeIndicator
-              ]}
-            />
-          ))}
-        </View>
-      </TouchableOpacity>
-      
-      <View style={styles.content}>
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>{service.title}</Text>
-          <Text style={styles.price}>${service.price}</Text>
-        </View>
-
-        {/* Rating Section */}
-        <View style={styles.ratingSection}>
-          <Text style={styles.sectionTitle}>Ratings & Reviews</Text>
-          <View style={styles.ratingOverview}>
-            <View style={styles.ratingLeft}>
-              <Text style={styles.ratingNumber}>{serviceRating.toFixed(1)}</Text>
-              {renderStars(serviceRating, 20)}
-              <Text style={styles.reviewCount}>({totalReviews} reviews)</Text>
-            </View>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Service Details</Text>
             <TouchableOpacity 
-              style={styles.rateButton}
-              onPress={() => handleAuthAction(() => setShowRatingModal(true))}
+              onPress={() => handleAuthAction(handleBookmark)}
+              style={[styles.headerActionButton, isBookmarked && styles.bookmarked]}
             >
-              <Ionicons name="star-outline" size={16} color="#3b82f6" />
-              <Text style={styles.rateButtonText}>Rate Service</Text>
+              <Ionicons name={isBookmarked ? "bookmark" : "bookmark-outline"} size={20} color="#fff" />
             </TouchableOpacity>
           </View>
-          {userRating > 0 && (
-            <View style={styles.userRatingDisplay}>
-              <Text style={styles.userRatingText}>Your rating: </Text>
-              {renderStars(userRating, 16)}
-            </View>
-          )}
-        </View>
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            onPress={() => handleAuthAction(handleLike)}
-            style={[styles.actionButton, isLiked && styles.liked]}
-          >
-            <Ionicons 
-              name={isLiked ? "heart" : "heart-outline"} 
-              size={20} 
-              color={isLiked ? "#ef4444" : "#6b7280"} 
-            />
-            <Text style={styles.actionText}>{likesCount}</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="chatbubble-outline" size={20} color="#6b7280" />
-            <Text style={styles.actionText}>{comments.length}</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="share-outline" size={20} color="#6b7280" />
-            <Text style={styles.actionText}>Share</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.providerSection}>
-          <Image 
-            source={{ uri: service.seller?.avatar || 'https://via.placeholder.com/50' }} 
-            style={styles.providerAvatar} 
-          />
-          <View style={styles.providerInfo}>
-            <Text style={styles.providerName}>{service.seller?.username || 'Provider'}</Text>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color="#fbbf24" />
-              <Text style={styles.rating}>{serviceRating.toFixed(1)}</Text>
-              <Text style={styles.reviewCount}>({totalReviews} reviews)</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.detailsSection}>
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.description}>{service.description}</Text>
-        </View>
-
-        <View style={styles.infoSection}>
-          <View style={styles.infoItem}>
-            <Ionicons name="location" size={20} color="#6b7280" />
-            <Text style={styles.infoText}>{service.location}</Text>
-          </View>
-          
-          <View style={styles.infoItem}>
-            <Ionicons name="time" size={20} color="#6b7280" />
-            <Text style={styles.infoText}>Available: {service.availability}</Text>
-          </View>
-          
-          <View style={styles.infoItem}>
-            <Ionicons name="pricetag" size={20} color="#6b7280" />
-            <Text style={styles.infoText}>Category: {service.serviceType}</Text>
-          </View>
-        </View>
-
-        {/* Comments Section */}
-        <View style={styles.commentsSection}>
-          <Text style={styles.sectionTitle}>Reviews ({comments.length})</Text>
-          
-          {isAuthenticated ? (
-            <View style={styles.commentInput}>
-              <Image 
-                source={{ uri: user?.avatar || 'https://via.placeholder.com/40' }} 
-                style={styles.commentAvatar} 
-              />
-              <View style={styles.commentInputContainer}>
-                <TextInput
-                  style={styles.commentTextInput}
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  placeholder="Share your experience..."
-                  multiline
+          <TouchableOpacity onPress={() => setShowImageModal(true)}>
+            <Image source={{ uri: serviceImages[currentImageIndex] }} style={styles.serviceImage} />
+            <View style={styles.imageIndicators}>
+              {serviceImages.map((_, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setCurrentImageIndex(index)}
+                  style={[
+                    styles.indicator,
+                    currentImageIndex === index && styles.activeIndicator
+                  ]}
                 />
+              ))}
+            </View>
+          </TouchableOpacity>
+          
+          <View style={styles.content}>
+            <View style={styles.titleSection}>
+              <Text style={styles.title}>{service.title}</Text>
+              <Text style={styles.price}>${service.price}</Text>
+            </View>
+
+            {/* Rating Section */}
+            <View style={styles.ratingSection}>
+              <Text style={styles.sectionTitle}>Ratings & Reviews</Text>
+              <View style={styles.ratingOverview}>
+                <View style={styles.ratingLeft}>
+                  <Text style={styles.ratingNumber}>{serviceRating.toFixed(1)}</Text>
+                  {renderStars(serviceRating, 20)}
+                  <Text style={styles.reviewCount}>({totalReviews} reviews)</Text>
+                </View>
                 <TouchableOpacity 
-                  onPress={handleCommentSubmit}
-                  style={styles.commentSubmitButton}
-                  disabled={!commentText.trim()}
+                  style={styles.rateButton}
+                  onPress={() => handleAuthAction(() => setShowRatingModal(true))}
                 >
-                  <Ionicons name="send" size={16} color="#fff" />
+                  <Ionicons name="star-outline" size={16} color="#3b82f6" />
+                  <Text style={styles.rateButtonText}>Rate Service</Text>
                 </TouchableOpacity>
               </View>
+              {userRating > 0 && (
+                <View style={styles.userRatingDisplay}>
+                  <Text style={styles.userRatingText}>Your rating: </Text>
+                  {renderStars(userRating, 16)}
+                </View>
+              )}
             </View>
-          ) : (
-            <TouchableOpacity 
-              style={styles.loginPrompt}
-              onPress={() => setShowLoginModal(true)}
-            >
-              <Text style={styles.loginPromptText}>Sign in to share your experience</Text>
-            </TouchableOpacity>
-          )}
 
-          {comments.map(comment => (
-            <View key={comment._id} style={styles.comment}>
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity 
+                onPress={() => handleAuthAction(handleLike)}
+                style={[styles.actionButton, isLiked && styles.liked]}
+              >
+                <Ionicons 
+                  name={isLiked ? "heart" : "heart-outline"} 
+                  size={20} 
+                  color={isLiked ? "#ef4444" : "#6b7280"} 
+                />
+                <Text style={styles.actionText}>{likesCount}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.actionButton}>
+                <Ionicons name="chatbubble-outline" size={20} color="#6b7280" />
+                <Text style={styles.actionText}>{comments.length}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.actionButton}>
+                <Ionicons name="share-outline" size={20} color="#6b7280" />
+                <Text style={styles.actionText}>Share</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* <View style={styles.providerSection}>
               <Image 
-                source={{ uri: comment.userId?.avatar || 'https://via.placeholder.com/40' }} 
-                style={styles.commentAvatar} 
+                source={{ uri: service.seller?.avatar || 'https://via.placeholder.com/50' }} 
+                style={styles.providerAvatar} 
               />
-              <View style={styles.commentContent}>
-                <View style={styles.commentHeader}>
-                  <Text style={styles.commentAuthor}>
-                    {comment.userId?.firstName} {comment.userId?.lastName}
-                  </Text>
-                  <Text style={styles.commentDate}>{formatDate(comment.createdAt)}</Text>
+              <View style={styles.providerInfo}>
+                <Text style={styles.providerName}>{service.seller?.username || 'Provider'}</Text>
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={16} color="#fbbf24" />
+                  <Text style={styles.rating}>{serviceRating.toFixed(1)}</Text>
+                  <Text style={styles.reviewCount}>({totalReviews} reviews)</Text>
                 </View>
-                <Text style={styles.commentText}>{comment.text}</Text>
-                
-                <View style={styles.commentActions}>
-                  <TouchableOpacity 
-                    onPress={() => handleAuthAction(() => handleCommentLike(comment._id))}
-                    style={styles.commentAction}
-                  >
-                    <Ionicons 
-                      name={comment.isLiked ? "thumbs-up" : "thumbs-up-outline"} 
-                      size={16} 
-                      color={comment.isLiked ? "#3b82f6" : "#6b7280"} 
-                    />
-                    <Text style={styles.commentActionText}>{comment.likes?.length || 0}</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    onPress={() => handleAuthAction(() => 
-                      setShowReplyInput(prev => ({ ...prev, [comment._id]: !prev[comment._id] }))
-                    )}
-                    style={styles.commentAction}
-                  >
-                    <Text style={styles.commentActionText}>Reply</Text>
-                  </TouchableOpacity>
-                </View>
+              </View>
+            </View> */}
 
-                {/* Replies */}
-                {comment.replies?.map((reply) => (
-                  <View key={reply._id} style={styles.reply}>
-                    <Image 
-                      source={{ uri: reply.userId?.avatar || 'https://via.placeholder.com/30' }} 
-                      style={styles.replyAvatar} 
-                    />
-                    <View style={styles.replyContent}>
-                      <Text style={styles.replyAuthor}>{reply.userId?.firstName}</Text>
-                      <Text style={styles.replyText}>{reply.text}</Text>
-                    </View>
-                  </View>
-                ))}
+            <View style={styles.detailsSection}>
+              <Text style={styles.sectionTitle}>Description</Text>
+              <Text style={styles.description}>{service.description}</Text>
+            </View>
 
-                {/* Reply Input */}
-                {showReplyInput[comment._id] && (
-                  <View style={styles.replyInput}>
-                    <TextInput
-                      style={styles.replyTextInput}
-                      value={replyText[comment._id] || ''}
-                      onChangeText={(text) => setReplyText(prev => ({ ...prev, [comment._id]: text }))}
-                      placeholder="Write a reply..."
-                    />
-                    <TouchableOpacity 
-                      onPress={() => handleReplySubmit(comment._id)}
-                      style={styles.replySubmitButton}
-                    >
-                      <Ionicons name="send" size={14} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                )}
+            <View style={styles.infoSection}>
+              <View style={styles.infoItem}>
+                <Ionicons name="location" size={20} color="#6b7280" />
+                <Text style={styles.infoText}>{service.location}</Text>
+              </View>
+              
+              <View style={styles.infoItem}>
+                <Ionicons name="time" size={20} color="#6b7280" />
+                <Text style={styles.infoText}>Available: {service.availability}</Text>
+              </View>
+              
+              <View style={styles.infoItem}>
+                <Ionicons name="pricetag" size={20} color="#6b7280" />
+                <Text style={styles.infoText}>Category: {service.serviceType}</Text>
               </View>
             </View>
-          ))}
-        </View>
 
-        <TouchableOpacity style={styles.contactButton}>
-          <Text style={styles.contactButtonText}>Contact Provider</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+            {/* Reviews Section */}
+            {reviews.length > 0 && (
+              <View style={styles.commentsSection}>
+                <Text style={styles.sectionTitle}>Ratings & Reviews ({reviews.length})</Text>
+                {reviews.map((review, index) => (
+                  <View key={review._id || `review-${index}`} style={styles.reviewItem}>
+                    <View style={styles.reviewHeader}>
+                      <Image 
+                        source={{ uri: review.userId?.avatar || 'https://via.placeholder.com/40' }} 
+                        style={styles.commentAvatar} 
+                      />
+                      <View style={styles.reviewInfo}>
+                        <Text style={styles.reviewAuthor}>
+                          {review.userId?.firstName} {review.userId?.lastName}
+                        </Text>
+                        <View style={styles.reviewRating}>
+                          {renderStars(review.rating, 14)}
+                          <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    {review.review && (
+                      <Text style={styles.reviewText}>{review.review}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Comments Section */}
+            <View style={styles.commentsSection}>
+              <Text style={styles.sectionTitle}>Comments ({comments.length})</Text>
+              
+              {isAuthenticated ? (
+                <View style={styles.commentInput}>
+                  <Image 
+                    source={{ uri: user?.avatar || 'https://via.placeholder.com/40' }} 
+                    style={styles.commentAvatar} 
+                  />
+                  <View style={styles.commentInputContainer}>
+                    <TextInput
+                      style={styles.commentTextInput}
+                      value={commentText}
+                      onChangeText={setCommentText}
+                      placeholder="Share your experience..."
+                      multiline
+                    />
+                    <TouchableOpacity 
+                      onPress={handleCommentSubmit}
+                      style={styles.commentSubmitButton}
+                      disabled={!commentText.trim()}
+                    >
+                      <Ionicons name="send" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.loginPrompt}
+                  onPress={() => setShowLoginModal(true)}
+                >
+                  <Text style={styles.loginPromptText}>Sign in to share your experience</Text>
+                </TouchableOpacity>
+              )}
+
+              {comments.map((comment, index) => (
+                <View key={comment._id || `comment-${index}`} style={styles.comment}>
+                  <Image 
+                    source={{ uri: comment.userId?.avatar || 'https://via.placeholder.com/40' }} 
+                    style={styles.commentAvatar} 
+                  />
+                  <View style={styles.commentContent}>
+                    <View style={styles.commentHeader}>
+                      <Text style={styles.commentAuthor}>
+                        {comment.userId?.firstName} {comment.userId?.lastName}
+                      </Text>
+                      <Text style={styles.commentDate}>{formatDate(comment.createdAt)}</Text>
+                    </View>
+                    <Text style={styles.commentText}>{comment.text}</Text>
+                    
+                    <View style={styles.commentActions}>
+                      <TouchableOpacity 
+                        onPress={() => handleAuthAction(() => handleCommentLike(comment._id))}
+                        style={styles.commentAction}
+                      >
+                        <Ionicons 
+                          name={comment.isLiked ? "thumbs-up" : "thumbs-up-outline"} 
+                          size={16} 
+                          color={comment.isLiked ? "#3b82f6" : "#6b7280"} 
+                        />
+                        <Text style={styles.commentActionText}>{comment.likes?.length || 0}</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        onPress={() => handleAuthAction(() => 
+                          setShowReplyInput(prev => ({ ...prev, [comment._id]: !prev[comment._id] }))
+                        )}
+                        style={styles.commentAction}
+                      >
+                        <Text style={styles.commentActionText}>Reply</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Replies */}
+                    {comment.replies?.map((reply, replyIndex) => (
+                      <View key={reply._id || `reply-${comment._id}-${replyIndex}`} style={styles.reply}>
+                        <Image 
+                          source={{ uri: reply.userId?.avatar || 'https://via.placeholder.com/30' }} 
+                          style={styles.replyAvatar} 
+                        />
+                        <View style={styles.replyContent}>
+                          <Text style={styles.replyAuthor}>{reply.userId?.firstName}</Text>
+                          <Text style={styles.replyText}>{reply.text}</Text>
+                        </View>
+                      </View>
+                    ))}
+
+                    {/* Reply Input */}
+                    {showReplyInput[comment._id] && (
+                      <View style={styles.replyInput}>
+                        <TextInput
+                          style={styles.replyTextInput}
+                          value={replyText[comment._id] || ''}
+                          onChangeText={(text) => setReplyText(prev => ({ ...prev, [comment._id]: text }))}
+                          placeholder="Write a reply..."
+                        />
+                        <TouchableOpacity 
+                          onPress={() => handleReplySubmit(comment._id)}
+                          style={styles.replySubmitButton}
+                        >
+                          <Ionicons name="send" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.contactButton}>
+              <Text style={styles.contactButtonText}>Contact Provider</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -560,6 +673,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  scrollContent: {
+    paddingBottom: 20, // Add padding at the bottom for better scrolling
   },
   header: {
     flexDirection: 'row',
@@ -800,6 +916,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: '#d1d5db',
+    paddingLeft: 15,
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 10,
@@ -810,6 +927,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b82f6',
     padding: 10,
     borderRadius: 20,
+    marginBottom: 5,
   },
   loginPrompt: {
     backgroundColor: '#f3f4f6',
@@ -957,7 +1075,50 @@ const styles = StyleSheet.create({
   ratingStars: {
     flexDirection: 'row',
     justifyContent: 'center',
+    marginBottom: 15,
+  },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    color: '#1f2937',
     marginBottom: 20,
+    minHeight: 80,
+    backgroundColor: '#f9fafb',
+  },
+  reviewItem: {
+    backgroundColor: '#f9fafb',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  reviewInfo: {
+    flex: 1,
+  },
+  reviewAuthor: {
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  reviewText: {
+    color: '#374151',
+    lineHeight: 20,
+    marginTop: 8,
   },
   modalButtons: {
     flexDirection: 'row',

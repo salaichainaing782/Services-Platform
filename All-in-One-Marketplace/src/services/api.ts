@@ -241,7 +241,7 @@ class ApiClient {
   }
 
   async incrementProductViews(id: string): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/products/${id}/views`, { method: 'POST' });
+    return this.request<{ message: string }>(`/products/${id}/view`, { method: 'POST' });
   }
 
   async getPriceRange(category: string): Promise<{ minPrice: number; maxPrice: number }> {

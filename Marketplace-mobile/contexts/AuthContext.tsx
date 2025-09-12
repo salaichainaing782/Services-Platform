@@ -37,7 +37,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await apiClient.getProfile();
         setUser(response.user || response);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.log('Auth check failed:', error.message);
+      }
       await AsyncStorage.removeItem('token');
     } finally {
       setIsLoading(false);
@@ -45,15 +48,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      const response = await apiClient.login({ email, password });
-      const { token, user } = response;
-      
-      await AsyncStorage.setItem('token', token);
-      setUser(user);
-    } catch (error: any) {
-      throw new Error(error.message || 'Login failed');
-    }
+    const response = await apiClient.login({ email, password });
+    const { token, user } = response;
+    
+    await AsyncStorage.setItem('token', token);
+    setUser(user);
   };
 
   const register = async (userData: any) => {

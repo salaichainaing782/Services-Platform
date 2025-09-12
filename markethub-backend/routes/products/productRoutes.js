@@ -10,10 +10,11 @@ const optionalAuth = require('../../middleware/optionalAuth');
 router.get('/', productController.getAllProducts);
 router.get('/featured', productController.getFeaturedProducts);
 router.get('/category/:category', optionalAuth, productController.getProductsByCategory);
-router.get('/:id', optionalAuth, productController.getProductById);
 
-// Increment views for a product
-router.post('/:id/views', productController.incrementProductViews);
+// Increment views for a product (must be before /:id route)
+router.post('/:id/view', productController.incrementProductViews);
+
+router.get('/:id', optionalAuth, productController.getProductById);
 
 // Get price range for category
 router.get('/range/:category', productController.getPriceRange);

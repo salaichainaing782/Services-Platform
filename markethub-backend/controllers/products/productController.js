@@ -391,23 +391,37 @@ const deleteProduct = async (req, res) => {
 const incrementProductViews = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('Incrementing views for product ID:', id);
+    
+    // First check if product exists
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      console.log('Product not found:', id);
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    
+    console.log('Current views before increment:', existingProduct.views);
+    
+    // Increment views
     const product = await Product.findByIdAndUpdate(
       id,
       { $inc: { views: 1 } },
       { new: true }
     );
 
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    res.json({ message: 'View counted', views: product.views });
+    console.log('Views after increment:', product.views);
+    res.json({ 
+      message: 'View counted successfully', 
+      views: product.views,
+      productId: id,
+      title: product.title
+    });
   } catch (error) {
     console.error('Error incrementing views:', error);
     if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'Invalid product ID' });
+      return res.status(400).json({ message: 'Invalid product ID format', productId: req.params.id });
     }
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
 
